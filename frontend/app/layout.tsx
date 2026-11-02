@@ -1,26 +1,15 @@
-import type { Metadata } from 'next';
-import { Inter, Roboto } from 'next/font/google';
+import { buildMetadata, RootShell } from './_shell';
 
-import { cn } from '@/lib/utils';
+export { rootViewport as viewport } from './_shell';
 
-import './globals.css';
+export async function generateMetadata() {
+  return buildMetadata();
+}
 
-const inter = Inter({ subsets: ['latin'], variable: '--font-sans' });
-
-const robotoSans = Roboto({
-  variable: '--font-robot-sans',
-  subsets: ['latin'],
-});
-
-export const metadata: Metadata = {
-  title: 'Battle eye',
-  description: '',
-};
-
-export default function RootLayout({ children }: LayoutProps<'/'>) {
-  return (
-    <html lang="en" className={cn('h-full', 'antialiased', robotoSans.variable, 'font-sans', inter.variable)}>
-      <body>{children}</body>
-    </html>
-  );
+export default async function RootLayout({
+  children,
+}: Readonly<{
+  children: React.ReactNode;
+}>) {
+  return <RootShell>{children}</RootShell>;
 }
