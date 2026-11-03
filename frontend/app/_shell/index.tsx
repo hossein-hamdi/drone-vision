@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from 'next';
-import { Inter, Roboto } from 'next/font/google';
+import { Roboto, Share_Tech_Mono } from 'next/font/google';
 
 import Providers from '@features/providers';
 
@@ -9,13 +9,22 @@ import { cn } from '@/lib/utils';
 
 import AppleSplashScreens from './AppleSplashScreens';
 
-const inter = Inter({ subsets: ['latin'], variable: '--font-sans' });
+const tech = Share_Tech_Mono({
+  subsets: ['latin'],
+  weight: '400',
+  variable: '--font-share-tech-mono',
+  display: 'swap',
+});
 
-const robotoSans = Roboto({ subsets: ['latin'], variable: '--font-robot-sans' });
+const robotoSans = Roboto({
+  subsets: ['latin'],
+  variable: '--font-roboto',
+  display: 'swap',
+});
 
 const LOCALIZED_META = {
-  brand: 'Battle eye',
-  description: 'Battle eye is a framework to unified you battle.',
+  brand: 'Skyeye',
+  description: 'Skyeye is a framework to unified you battle.',
 } as const;
 
 export function buildMetadata(): Metadata {
@@ -69,7 +78,7 @@ export function RootShell({ children }: RootShellProps) {
   return (
     <html
       lang="en"
-      className={cn(inter.variable, robotoSans.variable, 'bg-background h-full font-sans antialiased')}
+      className={cn(tech.variable, robotoSans.variable, 'bg-background h-full font-sans antialiased')}
       suppressHydrationWarning
     >
       <head>
