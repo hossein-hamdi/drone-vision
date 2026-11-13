@@ -148,6 +148,8 @@ builder.Services.AddSwaggerGen(o =>
 });
 
 var app = builder.Build();
+var gatewayPathBase = builder.Configuration["Gateway:PathBase"];
+if (!string.IsNullOrEmpty(gatewayPathBase)) app.UsePathBase(gatewayPathBase);
 app.UseExceptionHandler();
 app.UseStatusCodePages(async context =>
     await ApiProblems.WriteAsync(context.HttpContext, new ProblemDetails { Status = context.HttpContext.Response.StatusCode }));
@@ -161,20 +163,24 @@ app.Use(async (context, next) =>
 });
 if (app.Environment.IsDevelopment())
 {
-    app.UseSwagger();
+    app.UseSwagger(o => o.PreSerializeFilters.Add((document, request) =>
+        document.Servers = [new OpenApiServer { Url = request.PathBase.HasValue ? request.PathBase.Value! : "/" }]));
     app.UseSwaggerUI(o =>
     {
+        o.SwaggerEndpoint("v1/swagger.json", "Management v1");
         // Swagger embeds interceptor bodies in JavaScript strings and parses them as synchronous functions.
         o.UseRequestInterceptor("""
         (request) => {
             const url = new URL(request.url, window.location.origin);
+            const basePath = window.location.pathname.split('/swagger')[0];
+            const path = url.pathname.slice(basePath.length);
             if (url.origin === window.location.origin &&
-                ['/auth/csrf', '/auth/register', '/auth/login', '/auth/refresh', '/auth/logout'].includes(url.pathname)) {
+                ['/auth/csrf', '/auth/register', '/auth/login', '/auth/refresh', '/auth/logout'].includes(path)) {
                 delete request.headers.Authorization;
                 delete request.headers.authorization;
                 if (request.method.toUpperCase() === 'POST' && !request.headers['X-Auth-Transport'] &&
-                    ['/auth/login', '/auth/refresh', '/auth/logout'].includes(url.pathname)) {
-                    return fetch('/auth/csrf', { credentials: 'same-origin' })
+                    ['/auth/login', '/auth/refresh', '/auth/logout'].includes(path)) {
+                    return fetch(basePath + '/auth/csrf', { credentials: 'same-origin' })
                         .then(response => response.json())
                         .then(csrf => {
                             request.headers['X-CSRF-TOKEN'] = csrf.requestToken;
@@ -189,11 +195,13 @@ if (app.Environment.IsDevelopment())
         o.UseResponseInterceptor("""
         (response) => {
             const url = new URL(response.url, window.location.origin);
+            const basePath = window.location.pathname.split('/swagger')[0];
+            const path = url.pathname.slice(basePath.length);
             if (url.origin !== window.location.origin) return response;
-            const tokenResponse = ['/auth/login', '/auth/refresh'].includes(url.pathname);
+            const tokenResponse = ['/auth/login', '/auth/refresh'].includes(path);
             if (tokenResponse && response.status === 200 && response.obj && response.obj.accessToken) {
                 window.ui.preauthorizeApiKey('Bearer', response.obj.accessToken);
-            } else if (url.pathname === '/auth/logout' || (tokenResponse && response.status === 401)) {
+            } else if (path === '/auth/logout' || (tokenResponse && response.status === 401)) {
                 window.ui.authActions.logout(['Bearer']);
             }
             return response;

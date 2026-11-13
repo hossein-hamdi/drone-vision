@@ -1,0 +1,18 @@
+services:
+  gateway:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      ASPNETCORE_ENVIRONMENT: ${APP_ENVIRONMENT:-Development}
+      ASPNETCORE_URLS: https://+:8443
+      ASPNETCORE_Kestrel__Certificates__Default__Path: /certs/gateway.pfx
+      ASPNETCORE_Kestrel__Certificates__Default__Password: ${GATEWAY_CERT_PASSWORD:?Set GATEWAY_CERT_PASSWORD in .env}
+    volumes:
+      - ../../.certs/gateway.pfx:/certs/gateway.pfx:ro
+    ports:
+      - "${GATEWAY_PORT:-8443}:8443"
+    depends_on:
+      - frontend
+      - management
+    restart: unless-stopped

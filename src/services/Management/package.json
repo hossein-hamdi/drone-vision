@@ -1,0 +1,13 @@
+{
+  "name": "managementService",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "dotnet watch run --project Management.API --launch-profile https",
+    "build": "dotnet build Management.API/Management.API.csproj",
+    "start": "dotnet run --project Management.API --launch-profile https",
+    "format": "dotnet format whitespace . --folder",
+    "format:check": "dotnet format whitespace . --folder --verify-no-changes"
+  },
+  "packageManager": "pnpm@12.16.1"
+}

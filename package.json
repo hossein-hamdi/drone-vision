@@ -4,7 +4,9 @@
   "description": "",
   "main": "index.js",
   "workspaces": [
-    "frontend"
+    "frontend",
+    "src/services/Management",
+    "src/gateway"
   ],
   "scripts": {
     "prepare": "husky"

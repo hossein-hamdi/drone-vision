@@ -1,0 +1,17 @@
+{
+  "Routes": [
+    {
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "management",
+          "Port": 8080
+        }
+      ],
+      "DownstreamScheme": "http",
+      "DownstreamPathTemplate": "/api/management/{everything}",
+      "Priority": 10,
+      "UpstreamHttpMethod": [],
+      "UpstreamPathTemplate": "/api/management/{everything}"
+    }
+  ]
+}

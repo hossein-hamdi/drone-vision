@@ -29,7 +29,7 @@ public sealed class AuthController(IAuthenticationService authentication, IAntif
     public async Task<ActionResult<UserDto>> Register(RegisterRequest request, CancellationToken ct)
     {
         var user = await authentication.RegisterAsync(request, ct);
-        return Created($"/users/{user.Id}", user);
+        return Created($"{Request.PathBase}/users/{user.Id}", user);
     }
 
     /// <summary>Sign in. Browser transport sets an HttpOnly refresh cookie; native transport returns the secret in JSON.</summary>
@@ -103,12 +103,12 @@ public sealed class AuthController(IAuthenticationService authentication, IAntif
         return new(pair.AccessToken, "Bearer", pair.ExpiresIn, pair.RefreshTokenExpiresAt, browser ? null : pair.RefreshToken);
     }
 
-    private static CookieOptions CookieOptions(DateTimeOffset? expires = null) => new()
+    private CookieOptions CookieOptions(DateTimeOffset? expires = null) => new()
     {
         HttpOnly = true,
         Secure = true,
         SameSite = SameSiteMode.Strict,
-        Path = "/auth",
+        Path = $"{Request.PathBase}/auth",
         IsEssential = true,
         Expires = expires
     };

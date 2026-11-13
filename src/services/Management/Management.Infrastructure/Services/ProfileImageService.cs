@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Configuration;
 using Management.Application.Abstractions;
 using Management.Application.Common;
 using Management.Application.DTOs;
@@ -7,7 +8,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Management.Infrastructure.Services;
 
-public sealed class ProfileImageService(ProfileImageStore store, ManagementDbContext db) : IProfileImageService
+public sealed class ProfileImageService(ProfileImageStore store, ManagementDbContext db, IConfiguration configuration) : IProfileImageService
 {
     public async Task<ProfileImageData> GetAsync(string fileName, CancellationToken ct)
     {
@@ -31,7 +32,7 @@ public sealed class ProfileImageService(ProfileImageStore store, ManagementDbCon
         stored.Content = content.Content;
         stored.ContentType = content.ContentType;
         await db.SaveChangesAsync(ct);
-        return stored.Url;
+        return (configuration["Gateway:PathBase"]?.TrimEnd('/') ?? string.Empty) + stored.Url;
     }
 
     public async Task DeleteAsync(int userId, CancellationToken ct)

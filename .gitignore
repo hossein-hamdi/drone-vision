@@ -423,3 +423,7 @@ FodyWeavers.xsd
 
 # Official VS Code C# Dev Kit Extension exclusion
 #*.lscache
+
+# Local Docker secrets
+/.env
+/.certs/

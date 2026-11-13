@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Configuration;
 using Management.Application.Abstractions;
 using Management.Application.Common;
 using Management.Application.DTOs;
@@ -9,10 +10,12 @@ using Microsoft.EntityFrameworkCore;
 namespace Management.Infrastructure.Services;
 
 public sealed class UserService(ManagementDbContext db, UserManager<ApplicationUser> users,
-    IPermissionService permissions) : IUserService
+    IPermissionService permissions, IConfiguration configuration) : IUserService
 {
+    private readonly string publicPathBase = configuration["Gateway:PathBase"]?.TrimEnd('/') ?? string.Empty;
+
     private IQueryable<UserDto> Project(IQueryable<ApplicationUser> query) => query.Select(u => new UserDto(
-        u.Id, u.FullName, u.UserName!, u.ProfileImage == null ? null : u.ProfileImage.Url,
+        u.Id, u.FullName, u.UserName!, u.ProfileImage == null ? null : publicPathBase + u.ProfileImage.Url,
         (from ur in db.UserRoles
          join r in db.Roles on ur.RoleId equals r.Id
          where ur.UserId == u.Id

@@ -1,5 +1,7 @@
 packages:
   - frontend
+  - src/services/Management
+  - src/gateway
 
 allowBuilds:
   sharp: false

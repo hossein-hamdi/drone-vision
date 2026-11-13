@@ -1,0 +1,13 @@
+{
+  "name": "gateway",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "dotnet watch run --project Gateway.csproj",
+    "build": "dotnet build Gateway.csproj",
+    "start": "dotnet run --project Gateway.csproj",
+    "format": "dotnet format whitespace . --folder",
+    "format:check": "dotnet format whitespace . --folder --verify-no-changes"
+  },
+  "packageManager": "pnpm@12.16.1"
+}

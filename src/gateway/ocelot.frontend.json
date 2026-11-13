@@ -1,0 +1,30 @@
+{
+  "Routes": [
+    {
+      "UpstreamPathTemplate": "/",
+      "DownstreamPathTemplate": "/",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "frontend",
+          "Port": 3000
+        }
+      ],
+      "UpstreamHttpMethod": [],
+      "Priority": 0
+    },
+    {
+      "UpstreamPathTemplate": "/{everything}",
+      "DownstreamPathTemplate": "/{everything}",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "frontend",
+          "Port": 3000
+        }
+      ],
+      "UpstreamHttpMethod": [],
+      "Priority": 0
+    }
+  ]
+}
