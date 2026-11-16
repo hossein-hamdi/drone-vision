@@ -54,7 +54,7 @@ public sealed class AuthController(IAuthenticationService authentication, IAntif
         try { return Respond(await authentication.RefreshAsync(ReadToken(request, browser), browser, ct), browser); }
         catch (ApiException e) when (e.StatusCode == 401)
         {
-            if (browser) Response.Cookies.Delete(RefreshCookie, CookieOptions());
+            if (browser) ClearRefreshCookie();
             throw;
         }
     }
@@ -67,7 +67,7 @@ public sealed class AuthController(IAuthenticationService authentication, IAntif
     {
         var browser = await ValidateTransportAsync();
         try { await authentication.LogoutAsync(ReadToken(request, browser), browser, ct); }
-        finally { if (browser) Response.Cookies.Delete(RefreshCookie, CookieOptions()); }
+        finally { if (browser) ClearRefreshCookie(); }
         return NoContent();
     }
 
@@ -108,6 +108,16 @@ public sealed class AuthController(IAuthenticationService authentication, IAntif
                 CookieOptions(new DateTimeOffset(pair.RefreshTokenExpiresAt)));
         }
         return new(pair.AccessToken, "Bearer", pair.ExpiresIn, pair.RefreshTokenExpiresAt, browser ? null : pair.RefreshToken);
+    }
+
+    private void ClearRefreshCookie()
+    {
+        // Exception handling clears response headers before writing ProblemDetails.
+        Response.OnStarting(() =>
+        {
+            Response.Cookies.Delete(RefreshCookie, CookieOptions());
+            return Task.CompletedTask;
+        });
     }
 
     private CookieOptions CookieOptions(DateTimeOffset? expires = null) => new()

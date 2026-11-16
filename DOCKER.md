@@ -17,15 +17,15 @@ Choose a mode from the repository root:
 | Command | Behavior |
 | --- | --- |
 | `pnpm docker:build:dev` | Build development images only |
-| `pnpm docker:dev` | Run existing development images with hot reload |
+| `pnpm docker:dev` | Build current development images, then run with hot reload |
 | `pnpm docker:build:prod` | Build production images only |
 | `pnpm docker:prod` | Run existing production images in the background |
 
 `pnpm docker:build` also builds production images. Building images does not start
-containers. Build each mode once, then use its run command on subsequent starts.
-The run commands start containers with `--no-build` and require the corresponding
-images to exist. Development then attaches Compose Watch with `--no-up`, which
-skips its initial build/start step. `up --no-build --watch` is incompatible.
+containers. The development run command builds before starting containers so
+dependency changes made while Watch was stopped are included. Production starts
+with `--no-build` and requires production images to exist. Development then
+attaches Compose Watch with `--no-up`, which skips its initial build/start step.
 Development and production images have separate tags, so building one mode does
 not overwrite the other. Rebuild production images when shipping source changes.
 
@@ -41,9 +41,8 @@ images with `ASPNETCORE_ENVIRONMENT=Production`. Swagger is disabled.
 Equivalent Docker commands:
 
 ```powershell
-# Development: build once, then run with hot reload
-docker compose -f compose.yaml -f compose.dev.yaml build
-docker compose -f compose.yaml -f compose.dev.yaml up --no-build -d
+# Development: build current images, then run with hot reload
+docker compose -f compose.yaml -f compose.dev.yaml up --build -d
 docker compose -f compose.yaml -f compose.dev.yaml watch --no-up
 
 # Production: build once, then run in the background

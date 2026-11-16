@@ -35,10 +35,10 @@ const ToastItem = ({ toast, onClose }: ToastItemProps) => {
   };
 
   const styles = {
-    success: 'bg-success text-success-foreground',
-    error: 'bg-danger text-danger-foreground',
-    warning: 'bg-warning text-warning-foreground',
-    info: 'bg-accent text-accent-foreground',
+    success: 'bg-emerald-700 text-white',
+    error: 'bg-red-700 text-white',
+    warning: 'bg-amber-300 text-amber-950',
+    info: 'bg-blue-700 text-white',
   };
 
   return (

@@ -33,7 +33,21 @@ public sealed class SecurityOperationFilter : IOperationFilter
         }
         operation.Security = [new OpenApiSecurityRequirement
         {
+            [new OpenApiSecuritySchemeReference("BrowserSession", context.Document)] = []
+        }, new OpenApiSecurityRequirement
+        {
             [new OpenApiSecuritySchemeReference("Bearer", context.Document)] = []
         }];
+        if (context.ApiDescription.HttpMethod is not ("GET" or "HEAD" or "OPTIONS"))
+        {
+            operation.Parameters ??= [];
+            operation.Parameters.Add(new OpenApiParameter
+            {
+                Name = "X-CSRF-TOKEN",
+                In = ParameterLocation.Header,
+                Description = "Required for browser cookie authentication; Swagger supplies it automatically. Not required for native Bearer requests.",
+                Schema = new OpenApiSchema { Type = JsonSchemaType.String }
+            });
+        }
     }
 }

@@ -85,6 +85,8 @@ class EndpointCaller<Data, Response> {
 
       const csrfResponse = await fetch('/api/management/auth/csrf', {
         method: 'GET',
+        credentials: 'same-origin',
+        cache: 'no-store',
         signal,
       });
       if (!csrfResponse.ok) {
@@ -116,7 +118,6 @@ class EndpointCaller<Data, Response> {
       const json: unknown = await response.json().catch(() => undefined);
 
       if (!response.ok) {
-        if (response.status === 401 && !skipUnauthorizedHandling) triggerUnauthorized();
         throw new ApiError(EndpointCaller.getErrorMessage(json, 'Request failed'), response.status);
       }
 
@@ -132,6 +133,7 @@ class EndpointCaller<Data, Response> {
 
       return finalResponse;
     } catch (error) {
+      if (error instanceof ApiError && error.status === 401 && !skipUnauthorizedHandling) triggerUnauthorized();
       if (error instanceof ZodError) {
         throw new ValidationError(`The ${validationStage} is not valid.`, validationStage, [z.prettifyError(error)]);
       }

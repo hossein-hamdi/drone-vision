@@ -174,9 +174,9 @@ When implementing browser authentication:
 
 - Follow the backend's HTTPS, same-origin model. If the frontend is hosted separately, configure forwarding for auth, API, and upload paths while preserving cookies and required headers. No proxy is configured in this frontend yet.
 - Fetch `/auth/csrf` anonymously first. Send its `requestToken` as `X-CSRF-TOKEN` for login, refresh, and logout, with the associated cookies.
-- Refresh secrets stay in the backend's Secure, HttpOnly, SameSite=Strict cookie scoped to `/auth`. Do not store them in localStorage, expose them in browser JSON, or use the native-client transport from the browser.
-- Keep anonymous auth calls free of bearer headers; protected requests such as `/auth/me` use the access token.
-- Coordinate refresh attempts through one shared flow. Concurrent rotation can invalidate the session. Retry an expired-token request at most once after successful refresh; clear auth state when refresh fails.
+- Browser sessions use the backend's `__Secure-DroneVision.Refresh` Secure, HttpOnly, SameSite=Strict cookie with `Path=/`. Send it using `credentials: 'same-origin'`; do not store it in localStorage or expose it to JavaScript.
+- Browser requests, including protected requests such as `/auth/me`, authenticate with the cookie and do not need Bearer headers or frontend access-token refresh logic. Native clients retain the separate Bearer transport.
+- Fetch a fresh CSRF token before browser writes. The backend validates CSRF for cookie-authenticated protected writes and browser login/refresh/logout. Explicit refresh rotates the cookie, so concurrent explicit refresh calls must be coordinated.
 - Reuse `setUnauthorizedHandler`, `triggerUnauthorized`, and `beginSignout` where appropriate. The signout latch assumes a hard navigation resets module state. A login 401 should remain a form error; `skipUnauthorizedHandling` supports that distinction.
 - Map form fields to the actual backend DTO names: the login form uses `username`, while the API expects `userName` alongside `password`. UI validation does not replace backend validation, role checks, or permission policies.
 

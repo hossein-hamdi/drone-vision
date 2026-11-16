@@ -55,20 +55,20 @@ providers. Refresh-token hashes are stored in the token name; raw refresh tokens
 never stored. Do not introduce separate permission, role-permission, session, or
 refresh-token tables.
 
-Browser clients use HTTPS on the API's origin (proxy `/auth`, API routes, and uploads if a frontend is hosted separately). The API sets a Secure, HttpOnly, SameSite=Strict cookie scoped to `/auth`; refresh secrets never appear in browser JSON responses. There is no permissive CORS configuration. The cookie is sent only to authentication routes.
+Browser clients use HTTPS on the API's origin (proxy `/auth`, API routes, and uploads if a frontend is hosted separately). The API sets `__Secure-DroneVision.Refresh`, a Secure, HttpOnly, SameSite=Strict cookie with `Path=/`. All protected browser APIs authenticate this cookie against the stored token and active browser session, including expiry, revocation, user existence, and lockout checks. Refresh secrets never appear in browser JSON responses. There is no permissive CORS configuration. Browser clients send cookies with `credentials: 'same-origin'` and do not need Bearer headers.
 
 1. `GET /auth/csrf` obtains the anonymous antiforgery cookie and `{ "requestToken": "..." }`.
 2. `POST /auth/login` sends username/password JSON and that token in `X-CSRF-TOKEN`.
 3. `POST /auth/refresh` sends `{}`, the cookie, and `X-CSRF-TOKEN`. It returns a new access token, `expiresIn`, `tokenType`, and `refreshTokenExpiresAt` in UTC, and rotates the cookie.
 4. `POST /auth/logout` uses the same transport; it revokes the entire session and deletes the cookie, even if the access JWT has expired.
 
-Keep the dedicated authentication HTTP client free of bearer headers. Obtain the CSRF token anonymously, and reuse it with anonymous refresh/logout requests. Public registration is `POST /auth/register` with fullName, userName, and password; it never grants roles or creates a refresh cookie. Unknown JSON properties (including attempted registration roles) are rejected.
+Keep browser authentication calls free of bearer headers. Fetch a fresh CSRF request token before writes; once signed in, it is bound to the authenticated identity. Cookie-authenticated protected POST/PUT/PATCH/DELETE requests require `X-CSRF-TOKEN`, as do browser login/refresh/logout. GET/HEAD/OPTIONS requests do not require CSRF validation. Public registration is `POST /auth/register` with fullName, userName, and password; it never grants roles or creates a refresh cookie. Unknown JSON properties (including attempted registration roles) are rejected.
 
 Native/CLI clients explicitly set `X-Auth-Transport: native` on login/refresh/logout. They must omit browser Origin/Sec-Fetch-Site headers and the refresh cookie. Login and refresh include `refreshToken` in JSON; refresh/logout accept `{ "refreshToken": "..." }`. Native and browser sessions cannot switch transports. Store native refresh secrets in an OS credential store/keychain, transmit only over HTTPS to `/auth/refresh` or `/auth/logout`, and avoid request-body logging. Do not store refresh tokens in localStorage or URLs.
 
 Each raw refresh token has 512 random bits. Only its SHA-256 hash is stored, with a unique index. Rotation and logout lock the integer session row with SQL Server `UPDLOCK` inside a transaction. A reused rotated token revokes the family before returning 401; all descendants and access JWTs from that session then fail. Concurrent use of the same refresh token permits one rotation and treats subsequent uses as replay. Use one shared refresh coordinator per browser application. Access tokens carry subject, session ID, random JWT ID, issuer, audience, and validity timestamps; roles and permissions are not copied into JWTs. Every authenticated request validates the session and user lockout state, so logout, replay, and user deletion invalidate existing JWTs immediately.
 
-Requests trigger renewal; the backend cannot proactively renew browser tokens. Clients should refresh shortly before access-token expiry, coordinate concurrent refresh requests, retry an expired-token request once, and clear authentication state if refresh fails.
+Cookie-only browser API requests validate the existing session without rotating the token or requiring an access JWT. Explicit refresh still rotates the cookie, and concurrent refresh attempts must be coordinated. Native clients renew access JWTs with their refresh token and retry an expired-token request at most once.
 
 ## Endpoints and policies
 
@@ -123,9 +123,9 @@ dotnet run --project Management.API --launch-profile https
 
 The API listens on `https://localhost:7146` and `http://localhost:5206` (redirects to HTTPS).
 Development Swagger is available at `https://localhost:7146/swagger/index.html`.
-Swagger automatically authorizes protected requests after login/refresh and clears
-authorization on logout. Anonymous authentication requests omit bearer headers;
-`GET /auth/me` requires the bearer token.
+Swagger uses the browser cookie after browser login and supplies CSRF headers for
+writes. Native login responses can still authorize Bearer requests automatically.
+`GET /auth/me` accepts either a valid browser cookie or a valid native Bearer token.
 
 Set `Jwt:SigningKey` (Base64 for at least 64 random bytes) and the first-start
 `BootstrapAdmin:Password` through User Secrets or environment variables. Startup

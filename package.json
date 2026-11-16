@@ -11,7 +11,7 @@
   "scripts": {
     "docker:build:dev": "docker compose -f compose.yaml -f compose.dev.yaml build",
     "docker:build:prod": "docker compose build",
-    "docker:dev": "docker compose -f compose.yaml -f compose.dev.yaml up --no-build -d && docker compose -f compose.yaml -f compose.dev.yaml watch --no-up",
+    "docker:dev": "docker compose -f compose.yaml -f compose.dev.yaml up --build -d && docker compose -f compose.yaml -f compose.dev.yaml watch --no-up",
     "docker:prod": "docker compose up --no-build -d",
     "prepare": "husky"
   },

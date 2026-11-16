@@ -1,5 +1,6 @@
 using System.Text.Json.Serialization;
 using System.Threading.RateLimiting;
+using Management.API.Authentication;
 using Management.API.Authorization;
 using Management.API.ExceptionHandling;
 using Management.API.OpenApi;
@@ -9,6 +10,8 @@ using Management.Infrastructure.Authentication;
 using Management.Infrastructure.Persistence;
 using Management.Infrastructure.Persistence.Seed;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Antiforgery;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
@@ -47,7 +50,12 @@ builder.Services.AddAntiforgery(o =>
     o.Cookie.HttpOnly = true;
     o.Cookie.Path = "/";
 });
-builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJwtBearer();
+builder.Services.AddAuthentication("BrowserOrBearer")
+    .AddPolicyScheme("BrowserOrBearer", null, o => o.ForwardDefaultSelector = context =>
+        context.Request.Headers.Authorization.ToString().StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase)
+            ? JwtBearerDefaults.AuthenticationScheme : BrowserSessionHandler.SchemeName)
+    .AddScheme<AuthenticationSchemeOptions, BrowserSessionHandler>(BrowserSessionHandler.SchemeName, _ => { })
+    .AddJwtBearer();
 builder.Services.AddOptions<JwtBearerOptions>(JwtBearerDefaults.AuthenticationScheme)
     .Configure<IOptions<JwtOptions>>((bearer, jwt) =>
     {
@@ -137,6 +145,13 @@ builder.Services.AddSwaggerGen(o =>
 {
     o.SwaggerDoc("v1", new OpenApiInfo { Title = "DroneVision Management API", Version = "v1" });
     o.IncludeXmlComments(Path.Combine(AppContext.BaseDirectory, "Management.API.xml"));
+    o.AddSecurityDefinition("BrowserSession", new OpenApiSecurityScheme
+    {
+        Type = SecuritySchemeType.ApiKey,
+        In = ParameterLocation.Cookie,
+        Name = BrowserSessionHandler.CookieName,
+        Description = "Browser login sets this Secure, HttpOnly cookie automatically. Cookie-authenticated writes require X-CSRF-TOKEN."
+    });
     o.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
     {
         Type = SecuritySchemeType.Http,
@@ -174,12 +189,14 @@ if (app.Environment.IsDevelopment())
             const url = new URL(request.url, window.location.origin);
             const basePath = window.location.pathname.split('/swagger')[0];
             const path = url.pathname.slice(basePath.length);
-            if (url.origin === window.location.origin &&
-                ['/auth/csrf', '/auth/register', '/auth/login', '/auth/refresh', '/auth/logout'].includes(path)) {
-                delete request.headers.Authorization;
-                delete request.headers.authorization;
-                if (request.method.toUpperCase() === 'POST' && !request.headers['X-Auth-Transport'] &&
-                    ['/auth/login', '/auth/refresh', '/auth/logout'].includes(path)) {
+            if (url.origin === window.location.origin) {
+                request.credentials = 'same-origin';
+                if (['/auth/csrf', '/auth/register', '/auth/login', '/auth/refresh', '/auth/logout'].includes(path)) {
+                    delete request.headers.Authorization;
+                    delete request.headers.authorization;
+                }
+                if (!['GET', 'HEAD', 'OPTIONS'].includes(request.method.toUpperCase()) &&
+                    !request.headers['X-Auth-Transport']) {
                     return fetch(basePath + '/auth/csrf', { credentials: 'same-origin' })
                         .then(response => response.json())
                         .then(csrf => {
@@ -199,9 +216,9 @@ if (app.Environment.IsDevelopment())
             const path = url.pathname.slice(basePath.length);
             if (url.origin !== window.location.origin) return response;
             const tokenResponse = ['/auth/login', '/auth/refresh'].includes(path);
-            if (tokenResponse && response.status === 200 && response.obj && response.obj.accessToken) {
+            if (tokenResponse && response.status === 200 && response.obj && response.obj.refreshToken) {
                 window.ui.preauthorizeApiKey('Bearer', response.obj.accessToken);
-            } else if (path === '/auth/logout' || (tokenResponse && response.status === 401)) {
+            } else if (path === '/auth/logout' || (tokenResponse && [200, 401].includes(response.status))) {
                 window.ui.authActions.logout(['Bearer']);
             }
             return response;
@@ -212,6 +229,31 @@ if (app.Environment.IsDevelopment())
 app.UseRouting();
 app.UseRateLimiter();
 app.UseAuthentication();
+app.Use(async (context, next) =>
+{
+    // Cookie-authenticated writes need CSRF validation; native Bearer requests do not.
+    if (context.User.Identity?.AuthenticationType == BrowserSessionHandler.SchemeName &&
+        context.GetEndpoint()?.Metadata.GetMetadata<IAllowAnonymous>() is null &&
+        !HttpMethods.IsGet(context.Request.Method) && !HttpMethods.IsHead(context.Request.Method) &&
+        !HttpMethods.IsOptions(context.Request.Method))
+    {
+        try
+        {
+            await context.RequestServices.GetRequiredService<IAntiforgery>().ValidateRequestAsync(context);
+        }
+        catch (AntiforgeryValidationException)
+        {
+            await ApiProblems.WriteAsync(context, new ProblemDetails
+            {
+                Status = 400,
+                Title = "Validation Failed",
+                Detail = "A valid CSRF cookie and X-CSRF-TOKEN header are required."
+            });
+            return;
+        }
+    }
+    await next(context);
+});
 app.UseAuthorization();
 app.MapControllers();
 await using (var scope = app.Services.CreateAsyncScope())
