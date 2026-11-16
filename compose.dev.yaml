@@ -1,0 +1,66 @@
+services:
+  frontend:
+    image: drone-analyze-frontend:development
+    build:
+      target: development
+    environment:
+      NODE_ENV: development
+    develop:
+      watch:
+        - action: sync
+          path: ./frontend
+          target: /app
+          initial_sync: true
+          ignore:
+            - node_modules/
+            - .next/
+            - .git/
+            - .env*
+            - package.json
+            - pnpm-lock.yaml
+            - pnpm-workspace.docker.yaml
+            - Dockerfile
+        - action: rebuild
+          path: ./frontend/package.json
+        - action: rebuild
+          path: ./frontend/pnpm-lock.yaml
+        - action: rebuild
+          path: ./frontend/pnpm-workspace.docker.yaml
+        - action: rebuild
+          path: ./frontend/Dockerfile
+  gateway:
+    image: drone-analyze-gateway:development
+    build:
+      target: development
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+    develop:
+      watch:
+        - action: sync
+          path: ./src/gateway
+          target: /src
+          initial_sync: true
+          ignore:
+            - '**/bin/'
+            - '**/obj/'
+            - Dockerfile
+        - action: rebuild
+          path: ./src/gateway/Dockerfile
+  management:
+    image: drone-analyze-management:development
+    build:
+      target: development
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+    develop:
+      watch:
+        - action: sync
+          path: ./src/services/Management
+          target: /src
+          initial_sync: true
+          ignore:
+            - '**/bin/'
+            - '**/obj/'
+            - Dockerfile
+        - action: rebuild
+          path: ./src/services/Management/Dockerfile

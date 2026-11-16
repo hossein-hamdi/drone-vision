@@ -98,8 +98,15 @@ public sealed class AuthController(IAuthenticationService authentication, IAntif
 
     private AuthenticationResponse Respond(TokenPair pair, bool browser)
     {
-        if (browser) Response.Cookies.Append(RefreshCookie, pair.RefreshToken,
-            CookieOptions(new DateTimeOffset(pair.RefreshTokenExpiresAt)));
+        if (browser)
+        {
+            // Remove the old auth-scoped cookie before setting the page-visible cookie.
+            var legacyCookieOptions = CookieOptions();
+            legacyCookieOptions.Path = $"{Request.PathBase}/auth";
+            Response.Cookies.Delete(RefreshCookie, legacyCookieOptions);
+            Response.Cookies.Append(RefreshCookie, pair.RefreshToken,
+                CookieOptions(new DateTimeOffset(pair.RefreshTokenExpiresAt)));
+        }
         return new(pair.AccessToken, "Bearer", pair.ExpiresIn, pair.RefreshTokenExpiresAt, browser ? null : pair.RefreshToken);
     }
 
@@ -108,7 +115,7 @@ public sealed class AuthController(IAuthenticationService authentication, IAntif
         HttpOnly = true,
         Secure = true,
         SameSite = SameSiteMode.Strict,
-        Path = $"{Request.PathBase}/auth",
+        Path = "/",
         IsEssential = true,
         Expires = expires
     };

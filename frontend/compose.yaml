@@ -1,8 +1,12 @@
 services:
   frontend:
+    image: drone-analyze-frontend:production
     build:
       context: .
       dockerfile: Dockerfile
+      target: runtime
+    environment:
+      NODE_ENV: production
     expose:
       - "3000"
     restart: unless-stopped

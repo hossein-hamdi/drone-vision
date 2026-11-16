@@ -2,8 +2,15 @@ FROM node:24-alpine AS dependencies
 WORKDIR /app
 ENV NEXT_TELEMETRY_DISABLED=1
 RUN npm install -g pnpm@12.16.1
-COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+COPY package.json pnpm-lock.yaml ./
+COPY pnpm-workspace.docker.yaml ./pnpm-workspace.yaml
 RUN pnpm install --frozen-lockfile
+
+FROM dependencies AS development
+COPY . .
+ENV NODE_ENV=development
+EXPOSE 3000
+CMD ["pnpm", "dev", "--hostname", "0.0.0.0"]
 
 FROM dependencies AS build
 COPY . .

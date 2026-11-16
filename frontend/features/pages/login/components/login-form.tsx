@@ -2,7 +2,10 @@
 
 import { useState } from 'react';
 
+import { loginKeyGenerator, type LoginRequestData, type LoginResponse } from '@api/loginMutation';
+import { authConfig } from '@configs/auth.config';
 import { zodResolver } from '@hookform/resolvers/zod';
+import { useMutation } from '@tanstack/react-query';
 import { ArrowRight, Eye, EyeOff } from 'lucide-react';
 import { Controller, useForm } from 'react-hook-form';
 
@@ -13,17 +16,31 @@ import { Field, FieldError, FieldGroup, FieldLabel } from '@components/ui/field'
 import { Input } from '@components/ui/input';
 import { InputGroup, InputGroupAddon, InputGroupButton, InputGroupInput } from '@components/ui/input-group';
 
+import { useToast } from '@stores/toast';
+
 export default function LoginForm() {
   const [showPassword, setShowPassword] = useState(false);
+  const { showToast } = useToast();
   const form = useForm<LoginSchema>({
     resolver: zodResolver(loginSchema),
     defaultValues: { username: '', password: '' },
   });
 
-  const onSubmit = form.handleSubmit(() => {
-    form.setError('root', {
-      message: 'Sign-in is not connected yet. Contact your workspace administrator for access.',
-    });
+  const loginMutation = useMutation<LoginResponse, Error, LoginRequestData>({
+    mutationKey: loginKeyGenerator(),
+    onSuccess: () => {
+      form.resetField('password');
+      showToast('Signed in successfully.', 'success');
+      // A full navigation lets the proxy observe the HttpOnly cookie set by login.
+      window.location.replace(authConfig.defaultRedirect);
+    },
+    onError: (error) => {
+      showToast(error.message || 'Unable to sign in. Please try again.', 'error');
+    },
+  });
+
+  const onSubmit = form.handleSubmit((data) => {
+    loginMutation.mutate(data);
   });
 
   return (
@@ -90,12 +107,12 @@ export default function LoginForm() {
       </FieldGroup>
       <Button
         type="submit"
-        disabled={form.formState.isSubmitting}
+        disabled={loginMutation.isPending}
+        aria-busy={loginMutation.isPending}
         className="mt-5 h-12 w-full justify-center rounded-xl px-4"
       >
-        Sign in <ArrowRight aria-hidden="true" />
+        {loginMutation.isPending ? 'Signing in…' : 'Sign in'} <ArrowRight aria-hidden="true" />
       </Button>
-      {form.formState.errors.root && <FieldError className="mt-3" errors={[form.formState.errors.root]} />}
       <p className="text-muted-foreground mt-4 text-center text-xs leading-relaxed">
         Access is managed by your workspace administrator.
       </p>

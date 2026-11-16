@@ -1,6 +1,6 @@
-import LoginForm from './components/LoginForm';
-import LoginHeader from './components/LoginHeader';
-import LoginVideo from './components/LoginVideo';
+import LoginForm from './components/login-form';
+import LoginHeader from './components/login-header';
+import LoginVideo from './components/login-video';
 
 export default function LoginPage() {
   return (

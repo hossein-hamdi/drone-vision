@@ -18,6 +18,18 @@ class EndpointCaller<Data, Response> {
     this.options = options;
   }
 
+  private static getErrorMessage(json: unknown, fallback: string): string {
+    if (json && typeof json === 'object') {
+      for (const key of ['detail', 'title', 'error', 'message'] as const) {
+        if (key in json) {
+          const value = (json as Record<string, unknown>)[key];
+          if (typeof value === 'string' && value.trim()) return value;
+        }
+      }
+    }
+    return fallback;
+  }
+
   /** Arrays are joined with ',' (e.g. tagIds=1,2,3); null/undefined values are skipped. */
   private static buildSearchParams(data: Record<string, unknown>): string {
     const params = new URLSearchParams();
@@ -71,11 +83,32 @@ class EndpointCaller<Data, Response> {
 
       let finalUrl = typeof url === 'function' ? url(callData as Data) : url;
 
-      const requestInit: RequestInit = { method, signal };
+      const csrfResponse = await fetch('/api/management/auth/csrf', {
+        method: 'GET',
+        signal,
+      });
+      if (!csrfResponse.ok) {
+        const json: unknown = await csrfResponse.json().catch(() => undefined);
+        throw new ApiError(EndpointCaller.getErrorMessage(json, 'Failed to obtain CSRF token'), csrfResponse.status);
+      }
+
+      const csrfData: unknown = await csrfResponse.json();
+      if (
+        !csrfData ||
+        typeof csrfData !== 'object' ||
+        !('requestToken' in csrfData) ||
+        typeof csrfData.requestToken !== 'string' ||
+        !csrfData.requestToken.trim()
+      ) {
+        throw new ApiError('Invalid CSRF token response', csrfResponse.status);
+      }
+
+      const headers: Record<string, string> = { 'X-CSRF-TOKEN': csrfData.requestToken };
+      const requestInit: RequestInit = { method, signal, credentials: 'same-origin', headers };
       if (method === 'GET') {
         if (payload) finalUrl += EndpointCaller.buildSearchParams(payload);
       } else if (payload !== undefined) {
-        requestInit.headers = { 'Content-Type': 'application/json' };
+        headers['Content-Type'] = 'application/json';
         requestInit.body = JSON.stringify(payload);
       }
 
@@ -84,13 +117,7 @@ class EndpointCaller<Data, Response> {
 
       if (!response.ok) {
         if (response.status === 401 && !skipUnauthorizedHandling) triggerUnauthorized();
-        // Our routes return { error }, Auth returns { message, code }
-        let message = 'Request failed';
-        if (json && typeof json === 'object') {
-          if ('error' in json && typeof json.error === 'string') message = json.error;
-          else if ('message' in json && typeof json.message === 'string') message = json.message;
-        }
-        throw new ApiError(message, response.status);
+        throw new ApiError(EndpointCaller.getErrorMessage(json, 'Request failed'), response.status);
       }
 
       let finalResponse = json as Response;

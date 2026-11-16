@@ -1,10 +1,12 @@
 services:
   management:
+    image: drone-analyze-management:production
     build:
       context: .
       dockerfile: Dockerfile
+      target: runtime
     environment:
-      ASPNETCORE_ENVIRONMENT: ${APP_ENVIRONMENT:-Development}
+      ASPNETCORE_ENVIRONMENT: Production
       ASPNETCORE_URLS: http://+:8080
       ASPNETCORE_FORWARDEDHEADERS_ENABLED: 'true'
       Gateway__PathBase: /api/management

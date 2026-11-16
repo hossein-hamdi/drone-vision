@@ -154,7 +154,7 @@ Use `ApiError.status` for HTTP failures, `ValidationError` for schema failures, 
 
 The Management API returns ProblemDetails (`title`, `detail`, `status`, `traceId`, and validation `errors`). The current caller only extracts string `error` or `message` fields. Add appropriate ProblemDetails handling when connecting the backend, and show useful form or inline errors. Do not assume its existing error parsing already covers that contract.
 
-## Backend API and Browser Authentication
+## Backend Auth API
 
 These are backend routes, not implemented Next.js `/api/*` routes:
 
@@ -242,6 +242,7 @@ Use semantic tokens for application colors:
 ## Verification and Commits
 
 - For documentation-only changes, check formatting and review the diff. Application tests and a production build are unnecessary unless behavior or configuration changed.
+
 - For application changes, run the relevant lint, formatting, and TypeScript checks; `pnpm check` combines them. Run `pnpm build` when changing routing, rendering, framework configuration, or production behavior.
 - Verify changed UI and runtime flows in a running app. Use the local `next-dev-loop` skill when editing application code; compilation alone does not verify interaction behavior.
 - No frontend test runner is configured. Add focused behavioral tests when the scope warrants a test setup; report the checks actually run and any remaining integration gaps.
