@@ -517,6 +517,66 @@ export function getFilterSingleValue(filters: ColumnFilterItem[] | null | undefi
   return value || undefined;
 }
 
+export function getDateFilterRange(filters: ColumnFilterItem[] | null | undefined): {
+  CreatedAtFrom?: string;
+  CreatedAtTo?: string;
+} {
+  const item = filters?.[0];
+  if (!item) return {};
+
+  const values = Array.isArray(item.value) ? item.value : [item.value];
+  const first = values[0]?.trim();
+  const second = values[1]?.trim();
+
+  let rawFrom: string | undefined;
+  let rawTo: string | undefined;
+  let fromOffsetDays = 0;
+  let toOffsetDays = 0;
+
+  switch (item.operator) {
+    case 'isBetween':
+      rawFrom = first;
+      rawTo = second || first;
+      break;
+    case 'eq':
+      rawFrom = first;
+      rawTo = first;
+      break;
+    case 'gt':
+      rawFrom = first;
+      fromOffsetDays = 1;
+      break;
+    case 'gte':
+      rawFrom = first;
+      break;
+    case 'lt':
+      rawTo = first;
+      toOffsetDays = -1;
+      break;
+    case 'lte':
+      rawTo = first;
+      break;
+    default:
+      return {};
+  }
+
+  const fromDate = rawFrom ? parseFilterDate(rawFrom) : undefined;
+  const toDate = rawTo ? parseFilterDate(rawTo) : undefined;
+  if (fromDate) {
+    if (fromOffsetDays !== 0) fromDate.setDate(fromDate.getDate() + fromOffsetDays);
+    fromDate.setHours(0, 0, 0, 0);
+  }
+  if (toDate) {
+    if (toOffsetDays !== 0) toDate.setDate(toDate.getDate() + toOffsetDays);
+    toDate.setHours(23, 59, 59, 999);
+  }
+
+  return {
+    CreatedAtFrom: fromDate?.toISOString(),
+    CreatedAtTo: toDate?.toISOString(),
+  };
+}
+
 export function buildPagedQueryParams<TFilters extends Record<string, ColumnFilterItem[] | null | undefined>>({
   page,
   perPage,
