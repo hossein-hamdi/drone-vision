@@ -18,6 +18,10 @@ import { InputGroup, InputGroupAddon, InputGroupButton, InputGroupInput } from '
 
 import { useToast } from '@stores/toast';
 
+export const loginNavigation = {
+  replace: (url: string) => window.location.replace(url),
+};
+
 export default function LoginForm() {
   const [showPassword, setShowPassword] = useState(false);
   const { showToast } = useToast();
@@ -32,7 +36,7 @@ export default function LoginForm() {
       form.resetField('password');
       showToast('Signed in successfully.', 'success');
       // A full navigation lets the proxy observe the HttpOnly cookie set by login.
-      window.location.replace(authConfig.defaultRedirect);
+      loginNavigation.replace(authConfig.defaultRedirect);
     },
     onError: (error) => {
       showToast(error.message || 'Unable to sign in. Please try again.', 'error');

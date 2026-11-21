@@ -427,3 +427,4 @@ FodyWeavers.xsd
 # Local Docker secrets
 /.env
 /.certs/
+.vitest/

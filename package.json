@@ -19,13 +19,14 @@
   "author": "",
   "license": "ISC",
   "devEngines": {
+    
     "packageManager": {
       "name": "pnpm",
-      "version": "12.16.1",
+      "version": "12.21.0",
       "onFail": "download"
     }
   },
-  "packageManager": "pnpm@12.16.1",
+  "packageManager": "pnpm@12.21.0",
   "type": "module",
   "devDependencies": {
     "@commitlint/cli": "^21.2.4",
