@@ -9,7 +9,7 @@ services:
       watch:
         - action: sync
           path: ./frontend
-          target: /app
+          target: /app/frontend
           initial_sync: true
           ignore:
             - node_modules/
@@ -17,15 +17,13 @@ services:
             - .git/
             - .env*
             - package.json
-            - pnpm-lock.yaml
-            - pnpm-workspace.docker.yaml
             - Dockerfile
         - action: rebuild
           path: ./frontend/package.json
         - action: rebuild
-          path: ./frontend/pnpm-lock.yaml
+          path: ./pnpm-lock.yaml
         - action: rebuild
-          path: ./frontend/pnpm-workspace.docker.yaml
+          path: ./pnpm-workspace.yaml
         - action: rebuild
           path: ./frontend/Dockerfile
   gateway:

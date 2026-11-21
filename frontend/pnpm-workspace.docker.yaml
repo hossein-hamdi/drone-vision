@@ -1,5 +1,0 @@
-# Standalone configuration copied into the frontend Docker image.
-# Local workspace settings belong in ../pnpm-workspace.yaml.
-allowBuilds:
-  sharp: false
-  unrs-resolver: false

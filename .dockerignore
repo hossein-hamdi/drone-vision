@@ -1,0 +1,11 @@
+**/node_modules
+.git
+.vitest
+frontend/.next
+frontend/out
+*.log
+*.tsbuildinfo
+.env*
+!.env.example
+**/bin
+**/obj

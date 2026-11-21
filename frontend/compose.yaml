@@ -2,8 +2,8 @@ services:
   frontend:
     image: drone-analyze-frontend:production
     build:
-      context: .
-      dockerfile: Dockerfile
+      context: ..
+      dockerfile: frontend/Dockerfile
       target: runtime
     environment:
       NODE_ENV: production
