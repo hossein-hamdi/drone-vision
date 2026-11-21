@@ -8,5 +8,5 @@ interface SidebarItem {
 
 export const sidebar: SidebarItem[] = [
   { title: 'Overview', url: '/', icon: LayoutDashboard },
-  { title: 'Profile', url: '/profile', icon: UserRound },
+  { title: 'Users', url: '/users', icon: UserRound },
 ];

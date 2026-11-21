@@ -27,6 +27,9 @@ client.registerEndpoint<RequestData, Response>(keyGenerator, {
   method: 'GET',
   type: 'query',
   responseSchema,
+  skipUnauthorizedHandling: true,
+  staleTime: 5 * 60 * 1000,
+  refetchOnWindowFocus: true,
 });
 
 export { keyGenerator as getMeKeyGenerator };

@@ -65,19 +65,19 @@ class EndpointCaller<Data, Response> {
         finalData = requestDataSchema.parse(finalData);
       }
 
-      let payload: Record<string, unknown> | undefined;
+      let payload: Record<string, unknown> | FormData | undefined;
       if (requestNormalizer) {
         payload = requestNormalizer(finalData as Data);
       } else if (finalData !== undefined) {
         payload = { ...(finalData as Record<string, unknown>) };
       }
 
-      if (payload && omitFromBody) {
+      if (payload && !(payload instanceof FormData) && omitFromBody) {
         for (const key of omitFromBody) delete payload[key as string];
         if (Object.keys(payload).length === 0) payload = undefined;
       }
 
-      if (pageParamName && pageParam !== undefined && pageParam !== null) {
+      if (pageParamName && pageParam !== undefined && pageParam !== null && !(payload instanceof FormData)) {
         payload = { ...payload, [pageParamName]: pageParam };
       }
 
@@ -108,7 +108,9 @@ class EndpointCaller<Data, Response> {
       const headers: Record<string, string> = { 'X-CSRF-TOKEN': csrfData.requestToken };
       const requestInit: RequestInit = { method, signal, credentials: 'same-origin', headers };
       if (method === 'GET') {
-        if (payload) finalUrl += EndpointCaller.buildSearchParams(payload);
+        if (payload && !(payload instanceof FormData)) finalUrl += EndpointCaller.buildSearchParams(payload);
+      } else if (payload instanceof FormData) {
+        requestInit.body = payload;
       } else if (payload !== undefined) {
         headers['Content-Type'] = 'application/json';
         requestInit.body = JSON.stringify(payload);
@@ -156,6 +158,15 @@ class EndpointCaller<Data, Response> {
   }
 
   callMutation(mutationData?: Data): Promise<Response> {
+    if (
+      mutationData &&
+      typeof mutationData === 'object' &&
+      'signal' in mutationData &&
+      mutationData.signal instanceof AbortSignal
+    ) {
+      const { signal, ...rest } = mutationData as Data & { signal?: AbortSignal };
+      return this.caller(rest as Data, { signal });
+    }
     return this.caller(mutationData);
   }
 }

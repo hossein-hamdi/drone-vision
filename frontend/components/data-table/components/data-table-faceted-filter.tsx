@@ -1,0 +1,152 @@
+'use client';
+
+import type * as React from 'react';
+
+import { type Column, type RowData, Subscribe } from '@tanstack/react-table';
+import { PlusCircle, XCircle } from 'lucide-react';
+
+import { Button } from '@/components/ui/button';
+import { useDirection } from '@/components/ui/direction';
+import {
+  Faceted,
+  FacetedBadge,
+  FacetedBadgeList,
+  FacetedClear,
+  FacetedContent,
+  FacetedEmpty,
+  FacetedGroup,
+  FacetedInput,
+  FacetedItem,
+  FacetedItemIndicator,
+  FacetedList,
+  FacetedTrigger,
+  FacetedValue,
+} from '@/components/ui/faceted';
+import { Separator } from '@/components/ui/separator';
+
+import type { DataTableFeatures } from '../lib';
+import type { ColumnSelectOption } from '../lib';
+
+interface DataTableFacetedFilterProps<TData extends RowData, TValue> {
+  column?: Column<DataTableFeatures, TData, TValue>;
+  title?: string;
+  options: ColumnSelectOption[];
+  multiple?: boolean;
+}
+
+export function DataTableFacetedFilter<TData extends RowData, TValue>({
+  column,
+  ...props
+}: DataTableFacetedFilterProps<TData, TValue>) {
+  if (!column) {
+    return <DataTableFacetedFilterContent column={column} {...props} />;
+  }
+
+  return (
+    <Subscribe source={column.table.atoms.columnFilters} selector={() => column.getFilterValue()}>
+      {(filterValue) => <DataTableFacetedFilterContent column={column} columnFilterValue={filterValue} {...props} />}
+    </Subscribe>
+  );
+}
+
+interface DataTableFacetedFilterContentProps<TData extends RowData, TValue> extends DataTableFacetedFilterProps<
+  TData,
+  TValue
+> {
+  columnFilterValue?: unknown;
+}
+
+function DataTableFacetedFilterContent<TData extends RowData, TValue>({
+  column,
+  title = column?.columnDef.meta?.label ?? column?.id,
+  options,
+  multiple = false,
+  columnFilterValue,
+}: DataTableFacetedFilterContentProps<TData, TValue>) {
+  const dir = useDirection();
+  const selectedValues = Array.isArray(columnFilterValue)
+    ? columnFilterValue.filter((value): value is string => typeof value === 'string')
+    : [];
+  const hasSelection = selectedValues.length > 0;
+
+  function onValueChange(value: string | string[] | undefined) {
+    let values: string[];
+    if (Array.isArray(value)) {
+      values = value;
+    } else if (value) {
+      values = [value];
+    } else {
+      values = [];
+    }
+    column?.setFilterValue(values.length > 0 ? values : undefined);
+  }
+
+  function onReset(event: React.MouseEvent) {
+    event.stopPropagation();
+    column?.setFilterValue(undefined);
+  }
+
+  return (
+    <Faceted
+      value={multiple ? selectedValues : selectedValues[0]}
+      onValueChange={onValueChange}
+      items={options}
+      multiple={multiple}
+    >
+      <FacetedTrigger render={<Button variant="outline" className="max-w-full shrink" />}>
+        {hasSelection ? (
+          <span
+            aria-hidden="true"
+            className="rounded-sm opacity-70 transition-opacity hover:opacity-100"
+            onClick={onReset}
+          >
+            <XCircle />
+          </span>
+        ) : (
+          <PlusCircle />
+        )}
+        <bdi className="truncate">{title}</bdi>
+        {hasSelection && (
+          <>
+            <Separator orientation="vertical" className="mx-0.5 data-vertical:h-4 data-vertical:self-center" />
+            <FacetedValue>
+              {(selected) => (
+                <FacetedBadgeList className="min-w-0 flex-nowrap">
+                  {selected.length > 2 ? (
+                    <FacetedBadge>
+                      <bdi>{selected.length} selected</bdi>
+                    </FacetedBadge>
+                  ) : (
+                    selected.map((item) => (
+                      <FacetedBadge key={item.value} className="max-w-40" title={item.label}>
+                        <bdi className="truncate">{item.label}</bdi>
+                      </FacetedBadge>
+                    ))
+                  )}
+                </FacetedBadgeList>
+              )}
+            </FacetedValue>
+          </>
+        )}
+      </FacetedTrigger>
+      <FacetedContent aria-label={`${title} filter`} dir={dir} className="w-auto max-w-80 min-w-50">
+        <FacetedInput placeholder={title} />
+        <FacetedList className="max-h-full">
+          <FacetedEmpty>No results found.</FacetedEmpty>
+          <FacetedGroup className="max-h-75 scroll-py-1 overflow-x-hidden overflow-y-auto">
+            {options.map((option) => (
+              <FacetedItem key={option.value} value={option.value}>
+                {option.icon && <option.icon />}
+                <bdi className="flex-1 truncate" title={option.label}>
+                  {option.label}
+                </bdi>
+                <FacetedItemIndicator>{option.count?.toLocaleString()}</FacetedItemIndicator>
+              </FacetedItem>
+            ))}
+          </FacetedGroup>
+          <FacetedClear>Clear filters</FacetedClear>
+        </FacetedList>
+      </FacetedContent>
+    </Faceted>
+  );
+}

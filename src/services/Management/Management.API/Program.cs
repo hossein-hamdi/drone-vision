@@ -191,15 +191,17 @@ if (app.Environment.IsDevelopment())
             const path = url.pathname.slice(basePath.length);
             if (url.origin === window.location.origin) {
                 request.credentials = 'same-origin';
-                if (['/auth/csrf', '/auth/register', '/auth/login', '/auth/refresh', '/auth/logout'].includes(path)) {
+                if (request.headers && ['/auth/csrf', '/auth/register', '/auth/login', '/auth/refresh', '/auth/logout'].includes(path)) {
                     delete request.headers.Authorization;
                     delete request.headers.authorization;
                 }
-                if (!['GET', 'HEAD', 'OPTIONS'].includes(request.method.toUpperCase()) &&
-                    !request.headers['X-Auth-Transport']) {
+                const method = (request.method || 'GET').toUpperCase();
+                if (!['GET', 'HEAD', 'OPTIONS'].includes(method) &&
+                    !request.headers?.['X-Auth-Transport']) {
                     return fetch(basePath + '/auth/csrf', { credentials: 'same-origin' })
                         .then(response => response.json())
                         .then(csrf => {
+                            request.headers = request.headers || {};
                             request.headers['X-CSRF-TOKEN'] = csrf.requestToken;
                             request.credentials = 'same-origin';
                             return request;

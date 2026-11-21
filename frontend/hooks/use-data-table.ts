@@ -1,0 +1,312 @@
+import * as React from 'react';
+
+import {
+  type ColumnFiltersState,
+  functionalUpdate,
+  type PaginationState,
+  type RowData,
+  type SortingState,
+  type TableOptions,
+  type TableState,
+  type Updater,
+  useTable,
+} from '@tanstack/react-table';
+import { debounce, type Options as QueryStateOptions, useQueryStates } from 'nuqs';
+
+import type { ColumnFilterItem, JoinOperator } from '@/components/data-table/lib';
+import {
+  applyColumnConfig,
+  createConfigFromInputKey,
+  type DataTableConfigInput,
+  getConfigInputKey,
+  getIsDataTableConfig,
+  getUnmatchedConfigIds,
+} from '@/components/data-table/lib';
+import { type DataTableFeatures, dataTableFeatures } from '@/components/data-table/lib';
+import { getColumnFilters, getColumnFiltersKey, sortColumnFiltersByIds } from '@/components/data-table/lib';
+import { asFilterItems, getActiveFilters } from '@/components/data-table/lib';
+
+const DEBOUNCE_MS = 300;
+
+interface FiltersDraft {
+  filters: ColumnFiltersState;
+  urlFiltersKey: string;
+}
+
+type InitialTableState = Partial<TableState<DataTableFeatures>>;
+
+type UseDataTableProps<TData extends RowData> = Omit<
+  TableOptions<DataTableFeatures, TData>,
+  | 'state'
+  | 'onPaginationChange'
+  | 'onSortingChange'
+  | 'onColumnFiltersChange'
+  | 'onGlobalFilterChange'
+  | 'onJoinOperatorChange'
+  | 'pageCount'
+  | 'features'
+  | 'initialState'
+  | 'enableGlobalFilter'
+  | 'pageSizeOptions'
+  | 'manualFiltering'
+  | 'manualPagination'
+  | 'autoResetPageIndex'
+  | 'manualSorting'
+> &
+  Pick<QueryStateOptions, 'history' | 'scroll' | 'shallow' | 'clearOnDefault' | 'startTransition'> & {
+    debounceMs?: number;
+    config?: DataTableConfigInput;
+    initialState?: Omit<
+      InitialTableState,
+      'columnFilters' | 'globalFilter' | 'sorting' | 'pagination' | 'joinOperator'
+    >;
+  } & (
+    | {
+        mode?: 'server';
+        pageCount: number;
+      }
+    | {
+        mode: 'client';
+        pageCount?: never;
+      }
+  );
+
+function useDataTable<TData extends RowData>({
+  config: configProp,
+  columns,
+  mode = 'server',
+  pageCount,
+  initialState,
+  startTransition,
+  history = 'replace',
+  debounceMs = DEBOUNCE_MS,
+  clearOnDefault,
+  scroll = false,
+  shallow = true,
+  ...props
+}: UseDataTableProps<TData>) {
+  const isServer = mode === 'server';
+  const builtConfig = getIsDataTableConfig(configProp) ? configProp : undefined;
+  const configInputKey = builtConfig ? '' : getConfigInputKey(columns, configProp);
+  const config = React.useMemo(
+    () => builtConfig ?? createConfigFromInputKey(configInputKey),
+    [builtConfig, configInputKey]
+  );
+  const { enableGlobalFilter, pageSizeOptions, filterVariants, urlKeys } = config;
+
+  const [initialTableState] = React.useState<InitialTableState>(() => ({
+    ...initialState,
+    sorting: config.defaultSorting,
+    pagination: { pageIndex: 0, pageSize: config.defaultPageSize },
+    joinOperator: config.defaultJoinOperator,
+  }));
+
+  const tableColumns = React.useMemo(
+    () => (builtConfig ? columns.map((column) => applyColumnConfig(column, builtConfig.columns)) : columns),
+    [columns, builtConfig]
+  );
+
+  const hasInlineColumns = configProp !== undefined && !builtConfig && 'columns' in configProp;
+
+  React.useEffect(() => {
+    if (process.env.NODE_ENV === 'production') return;
+    if (hasInlineColumns) {
+      console.warn(
+        'useDataTable: an inline config ignores `columns`. Pass the config through createDataTableConfig, or set the filter and sorting on the column defs.'
+      );
+    }
+    if (!builtConfig) return;
+    const unmatchedIds = getUnmatchedConfigIds(builtConfig.columns, columns);
+    if (unmatchedIds.length === 0) return;
+    console.warn(
+      `useDataTable: the config has no matching column for ${unmatchedIds.map((columnId) => `"${columnId}"`).join(', ')}. Rename the config key or add the column.`
+    );
+  }, [hasInlineColumns, builtConfig, columns]);
+
+  const filterableIds = React.useMemo(() => Object.keys(filterVariants), [filterVariants]);
+
+  const queryStateOptions = {
+    urlKeys,
+    history,
+    scroll,
+    shallow: isServer ? shallow : true,
+    clearOnDefault,
+    startTransition,
+  };
+  const shouldDebounce = isServer && !shallow;
+
+  function getUrlUpdateOptions(isClearing: boolean) {
+    return shouldDebounce && !isClearing ? { limitUrlUpdates: debounce(debounceMs) } : undefined;
+  }
+
+  const [{ page, perPage, sort: sorting, joinOperator, search }, setQueryState] = useQueryStates(
+    config.stateParsers,
+    queryStateOptions
+  );
+  const [filterParams, setFilterParams] = useQueryStates(config.filterParsers, queryStateOptions);
+
+  const pagination = React.useMemo<PaginationState>(
+    () => ({ pageIndex: page - 1, pageSize: perPage }),
+    [page, perPage]
+  );
+
+  const getNextPagination = useChainedUpdate(pagination);
+
+  function onPaginationChange(updater: Updater<PaginationState>) {
+    const next = getNextPagination(updater);
+    if (next.pageIndex !== pagination.pageIndex) {
+      void setQueryState({ page: next.pageIndex + 1 });
+    }
+    if (next.pageSize !== pagination.pageSize) {
+      void setQueryState({ perPage: next.pageSize });
+    }
+  }
+
+  const getNextSorting = useChainedUpdate(sorting);
+
+  function onSortingChange(updater: Updater<SortingState>) {
+    const next = getNextSorting(updater);
+    if (JSON.stringify(next) === JSON.stringify(sorting)) return;
+    void setQueryState({ sort: next, page: null });
+  }
+
+  const getNextJoinOperator = useChainedUpdate(joinOperator);
+
+  function onJoinOperatorChange(updater: Updater<JoinOperator>) {
+    const next = getNextJoinOperator(updater);
+    if (next === joinOperator) return;
+    void setQueryState({ joinOperator: next, page: null });
+  }
+
+  const globalFilter = enableGlobalFilter ? search : '';
+  const getNextGlobalFilter = useChainedUpdate<unknown>(globalFilter);
+
+  function onGlobalFilterChange(updater: Updater<unknown>) {
+    if (!enableGlobalFilter) return;
+    const value = getGlobalFilterValue(getNextGlobalFilter(updater));
+    if (value === search) return;
+    void setQueryState({ search: value, page: null }, getUrlUpdateOptions(value === ''));
+  }
+
+  const locationSearch = React.useSyncExternalStore(subscribeToHistory, getLocationSearch, getServerLocationSearch);
+
+  const filterOrderKey = React.useMemo(() => {
+    const idsByUrlKey = new Map(filterableIds.map((id) => [urlKeys[id], id]));
+    const urlKeyOrder = new Set(new URLSearchParams(locationSearch).keys());
+    return JSON.stringify([...urlKeyOrder].flatMap((key) => idsByUrlKey.get(key) ?? []));
+  }, [filterableIds, urlKeys, locationSearch]);
+
+  const urlFilters = React.useMemo(
+    () => sortColumnFiltersByIds(getColumnFilters(filterableIds, filterParams), JSON.parse(filterOrderKey)),
+    [filterableIds, filterParams, filterOrderKey]
+  );
+  const urlFiltersKey = getColumnFiltersKey(urlFilters);
+
+  const [filtersDraft, setFiltersDraft] = React.useState<FiltersDraft | null>(null);
+  const columnFilters = filtersDraft?.urlFiltersKey === urlFiltersKey ? filtersDraft.filters : urlFilters;
+
+  const getNextColumnFilters = useChainedUpdate(columnFilters);
+
+  function onColumnFiltersChange(updater: Updater<ColumnFiltersState>) {
+    const filters = getNextColumnFilters(updater);
+    const activeFilters = getActiveFilters(asFilterItems(filters)).filter((filter) =>
+      Object.hasOwn(filterVariants, filter.id)
+    );
+    const nextUrlFiltersKey = getColumnFiltersKey(activeFilters);
+
+    setFiltersDraft({ filters, urlFiltersKey: nextUrlFiltersKey });
+    if (
+      nextUrlFiltersKey === urlFiltersKey &&
+      getFilterColumnOrder(activeFilters) === getFilterColumnOrder(urlFilters)
+    ) {
+      return;
+    }
+
+    const params: Record<string, ColumnFilterItem[] | null> = {};
+    for (const filter of activeFilters) {
+      params[filter.id] = [...(params[filter.id] ?? []), filter];
+    }
+    for (const id of filterableIds) params[id] ??= null;
+
+    const options = getUrlUpdateOptions(activeFilters.length < urlFilters.length);
+    void setFilterParams(params, options);
+    void setQueryState({ page: null }, options);
+  }
+
+  const table = useTable(
+    {
+      ...props,
+      features: dataTableFeatures,
+      columns: tableColumns,
+      enableGlobalFilter,
+      pageSizeOptions,
+      initialState: initialTableState,
+      pageCount: isServer ? pageCount : undefined,
+      state: {
+        pagination,
+        sorting,
+        columnFilters,
+        joinOperator,
+        globalFilter,
+      },
+      onPaginationChange,
+      onSortingChange,
+      onColumnFiltersChange,
+      onJoinOperatorChange,
+      onGlobalFilterChange,
+      manualPagination: isServer,
+      autoResetPageIndex: false,
+      manualSorting: isServer,
+      manualFiltering: isServer,
+    },
+    selectTableState
+  );
+
+  return { table };
+}
+
+function subscribeToHistory(onChange: () => void) {
+  window.addEventListener('popstate', onChange);
+  return () => window.removeEventListener('popstate', onChange);
+}
+
+function getLocationSearch() {
+  return window.location.search;
+}
+
+function getServerLocationSearch() {
+  return '';
+}
+
+function getFilterColumnOrder(filters: ColumnFilterItem[]) {
+  return JSON.stringify([...new Set(filters.map((filter) => filter.id))]);
+}
+
+function getGlobalFilterValue(value: unknown) {
+  if (typeof value === 'string') return value;
+  if (typeof value === 'number') return String(value);
+  return '';
+}
+
+function selectTableState(state: TableState<DataTableFeatures>) {
+  return {
+    columnFilters: state.columnFilters,
+    globalFilter: state.globalFilter,
+    joinOperator: state.joinOperator,
+    pagination: state.pagination,
+    sorting: state.sorting,
+  };
+}
+
+function useChainedUpdate<TValue>(value: TValue) {
+  const pendingRef = React.useRef<{ base: TValue; next: TValue } | null>(null);
+
+  return (updater: Updater<TValue>) => {
+    const pending = pendingRef.current;
+    const next = functionalUpdate(updater, pending?.base === value ? pending.next : value);
+    pendingRef.current = { base: value, next };
+    return next;
+  };
+}
+
+export { useDataTable, type UseDataTableProps };

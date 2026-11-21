@@ -1,0 +1,819 @@
+'use client';
+
+import * as React from 'react';
+
+import { type Column, type ReactTable, type RowData, Subscribe } from '@tanstack/react-table';
+import { cn } from 'cn';
+import { BadgeCheck, CalendarIcon, ListFilter, Text, X } from 'lucide-react';
+
+import { Button } from '@/components/ui/button';
+import { Calendar } from '@/components/ui/calendar';
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
+import { useDirection } from '@/components/ui/direction';
+import {
+  Faceted,
+  FacetedContent,
+  FacetedEmpty,
+  FacetedGroup,
+  FacetedInput,
+  FacetedItem,
+  FacetedItemIndicator,
+  FacetedList,
+  FacetedTrigger,
+} from '@/components/ui/faceted';
+import { Input } from '@/components/ui/input';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+
+import type { DataTableFeatures } from '../lib';
+import type { ColumnFilterItem, ColumnSelectOption } from '../lib';
+import {
+  coerceFilterValue,
+  getColumnSelectOptions,
+  getDateFilterLabel,
+  getDefaultFilter,
+  getFilterDates,
+  getFilterDateValue,
+  getFilterOperators,
+  getFilterVariant,
+  getIsEditableTarget,
+  getIsTableShortcutTarget,
+  getIsValuelessOperator,
+  getSelectFilterValue,
+} from '../lib';
+import { generateId } from '../lib';
+
+import { DataTableRangeFilter } from './data-table-range-filter';
+
+const FILTER_SHORTCUT_KEY = 'f';
+const REMOVE_FILTER_SHORTCUTS = ['backspace', 'delete'];
+
+type FilterUpdate = Partial<Omit<ColumnFilterItem, 'filterId'>>;
+type FilterSelector = 'field' | 'operator' | 'value';
+
+interface CommandQuery {
+  columnId: string | null;
+  search: string;
+}
+
+const EMPTY_QUERY: CommandQuery = { columnId: null, search: '' };
+const BOOLEAN_OPTIONS = [
+  { label: 'True', value: 'true' },
+  { label: 'False', value: 'false' },
+];
+
+interface DataTableCommandFilterMenuProps<TData extends RowData> extends React.ComponentProps<typeof PopoverContent> {
+  table: ReactTable<DataTableFeatures, TData, unknown>;
+  disabled?: boolean;
+}
+
+export function DataTableCommandFilterMenu<TData extends RowData>({
+  table,
+  ...props
+}: DataTableCommandFilterMenuProps<TData>) {
+  return (
+    <Subscribe source={table.atoms.columnFilters} selector={() => table.getColumnFilterItems()}>
+      {(filters) => <DataTableCommandFilterMenuContent table={table} filters={filters} {...props} />}
+    </Subscribe>
+  );
+}
+
+interface DataTableCommandFilterMenuContentProps<TData extends RowData> extends DataTableCommandFilterMenuProps<TData> {
+  filters: ColumnFilterItem[];
+}
+
+function DataTableCommandFilterMenuContent<TData extends RowData>({
+  table,
+  filters,
+  disabled,
+  className,
+  ...props
+}: DataTableCommandFilterMenuContentProps<TData>) {
+  const dir = useDirection();
+  const id = React.useId();
+  const [open, setOpen] = React.useState(false);
+  const [query, setQuery] = React.useState(EMPTY_QUERY);
+  const triggerRef = React.useRef<HTMLButtonElement>(null);
+  const inputRef = React.useRef<HTMLInputElement>(null);
+
+  React.useEffect(() => {
+    function onKeyDown(event: KeyboardEvent) {
+      if (disabled) return;
+      if (!open && !getIsTableShortcutTarget(triggerRef.current, event.target)) {
+        return;
+      }
+      if (getIsEditableTarget(event.target)) return;
+      if (event.key.toLowerCase() !== FILTER_SHORTCUT_KEY || !(event.ctrlKey || event.metaKey) || !event.shiftKey) {
+        return;
+      }
+
+      event.preventDefault();
+      setOpen((open) => !open);
+    }
+
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [disabled, open]);
+
+  const columns = React.useMemo(() => table.getAllLeafColumns().filter((column) => column.getCanFilter()), [table]);
+
+  const selectedColumn = columns.find((column) => column.id === query.columnId);
+  const hasFilters = filters.length > 0;
+
+  function onColumnSelect(column: Column<DataTableFeatures, TData>) {
+    setQuery({ columnId: column.id, search: '' });
+    inputRef.current?.focus();
+  }
+
+  function onInputKeyDown(event: React.KeyboardEvent<HTMLInputElement>) {
+    if (!selectedColumn || query.search || !getIsRemoveKey(event)) return;
+
+    event.preventDefault();
+    setQuery(EMPTY_QUERY);
+  }
+
+  function onFilterAdd(column: Column<DataTableFeatures, TData>, value: string) {
+    const defaults = getDefaultFilter(column);
+    if (!value.trim() && defaults.variant !== 'boolean') return;
+
+    table.addColumnFilter({
+      ...defaults,
+      value: defaults.operator === 'inArray' ? [value] : value,
+      filterId: generateId({ length: 8 }),
+    });
+    setOpen(false);
+  }
+
+  function onFilterUpdate(filterId: string, updates: FilterUpdate) {
+    table.updateColumnFilter(filterId, updates);
+  }
+
+  function onFilterRemove(filterId: string) {
+    table.removeColumnFilter(filterId);
+    triggerRef.current?.focus();
+  }
+
+  function onFiltersReset() {
+    table.resetColumnFilters(true);
+    table.resetJoinOperator();
+  }
+
+  function onTriggerKeyDown(event: React.KeyboardEvent<HTMLButtonElement>) {
+    const lastFilter = filters.at(-1);
+    if (!lastFilter || !getIsRemoveKey(event)) return;
+
+    event.preventDefault();
+    onFilterRemove(lastFilter.filterId);
+  }
+
+  return (
+    <div data-slot="data-table-command-filter-menu" className="flex max-w-full min-w-0 flex-wrap items-center gap-2">
+      {hasFilters && (
+        <>
+          <div role="list" className="flex max-w-full min-w-0 flex-wrap items-center gap-2">
+            {filters.map((filter) => (
+              <DataTableFilterItem
+                key={filter.filterId}
+                filter={filter}
+                filterItemId={`${id}-filter-${filter.filterId}`}
+                columns={columns}
+                onFilterUpdate={onFilterUpdate}
+                onFilterRemove={onFilterRemove}
+              />
+            ))}
+          </div>
+          <Button aria-label="Reset all filters" variant="outline" size="icon" onClick={onFiltersReset}>
+            <X />
+          </Button>
+        </>
+      )}
+      <Popover
+        open={open}
+        onOpenChange={setOpen}
+        onOpenChangeComplete={(open) => {
+          if (!open) setQuery(EMPTY_QUERY);
+        }}
+      >
+        <PopoverTrigger
+          render={
+            <Button
+              ref={triggerRef}
+              aria-label="Open filter command menu"
+              variant="outline"
+              size={hasFilters ? 'icon' : 'default'}
+              onKeyDown={onTriggerKeyDown}
+              disabled={disabled}
+            />
+          }
+        >
+          <ListFilter className="text-muted-foreground" />
+          {!hasFilters && 'Filter'}
+        </PopoverTrigger>
+        <PopoverContent dir={dir} className={cn('w-full max-w-(--available-width) p-0', className)} {...props}>
+          <Command loop className="[&_[cmdk-input-wrapper]_svg]:hidden">
+            <CommandInput
+              ref={inputRef}
+              placeholder={
+                selectedColumn ? (selectedColumn.columnDef.meta?.label ?? selectedColumn.id) : 'Search fields...'
+              }
+              value={query.search}
+              onValueChange={(search) => setQuery((query) => ({ ...query, search }))}
+              onKeyDown={onInputKeyDown}
+            />
+            <CommandList>
+              {selectedColumn ? (
+                <FilterValueOptions
+                  column={selectedColumn}
+                  search={query.search}
+                  onSelect={(value) => onFilterAdd(selectedColumn, value)}
+                />
+              ) : (
+                <FilterFieldOptions columns={columns} onSelect={onColumnSelect} />
+              )}
+            </CommandList>
+          </Command>
+        </PopoverContent>
+      </Popover>
+    </div>
+  );
+}
+
+function getIsRemoveKey(event: React.KeyboardEvent) {
+  return REMOVE_FILTER_SHORTCUTS.includes(event.key.toLowerCase());
+}
+
+interface DataTableFilterItemProps<TData extends RowData> {
+  filter: ColumnFilterItem;
+  filterItemId: string;
+  columns: Column<DataTableFeatures, TData>[];
+  onFilterUpdate: (filterId: string, updates: FilterUpdate) => void;
+  onFilterRemove: (filterId: string) => void;
+}
+
+function DataTableFilterItem<TData extends RowData>({
+  filter,
+  filterItemId,
+  columns,
+  onFilterUpdate,
+  onFilterRemove,
+}: DataTableFilterItemProps<TData>) {
+  const [activeSelector, setActiveSelector] = React.useState<FilterSelector | null>(null);
+
+  const column = columns.find((column) => column.id === filter.id);
+  if (!column) return null;
+
+  const columnMeta = column.columnDef.meta;
+
+  function getSelectorProps(selector: FilterSelector) {
+    return {
+      open: activeSelector === selector,
+      onOpenChange: (open: boolean) => setActiveSelector(open ? selector : null),
+    };
+  }
+
+  function onItemKeyDown(event: React.KeyboardEvent<HTMLDivElement>) {
+    if (activeSelector || getIsEditableTarget(event.target)) return;
+    if (!getIsRemoveKey(event)) return;
+
+    event.preventDefault();
+    onFilterRemove(filter.filterId);
+  }
+
+  return (
+    <div
+      role="listitem"
+      id={filterItemId}
+      className="bg-background flex h-8 max-w-full min-w-0 items-center rounded-md"
+      onKeyDown={onItemKeyDown}
+    >
+      <FilterFieldSelector
+        filter={filter}
+        column={column}
+        columns={columns}
+        onFilterUpdate={onFilterUpdate}
+        {...getSelectorProps('field')}
+      />
+      <FilterOperatorSelector
+        filter={filter}
+        label={columnMeta?.label ?? column.id}
+        listboxId={`${filterItemId}-operator-listbox`}
+        onFilterUpdate={onFilterUpdate}
+        {...getSelectorProps('operator')}
+      />
+      <FilterValueInput
+        filter={filter}
+        column={column}
+        inputId={`${filterItemId}-input`}
+        onFilterUpdate={onFilterUpdate}
+        {...getSelectorProps('value')}
+      />
+      <Button
+        aria-controls={filterItemId}
+        aria-label={`Remove ${columnMeta?.label ?? column.id} filter`}
+        variant="ghost"
+        className="border-input dark:bg-input/30 h-full shrink-0 rounded-none rounded-e-md border border-s-0 px-1.5"
+        onClick={() => onFilterRemove(filter.filterId)}
+      >
+        <X className="size-3.5" />
+      </Button>
+    </div>
+  );
+}
+
+interface FilterSelectorProps {
+  filter: ColumnFilterItem;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onFilterUpdate: (filterId: string, updates: FilterUpdate) => void;
+}
+
+interface FilterFieldSelectorProps<TData extends RowData> extends FilterSelectorProps {
+  column: Column<DataTableFeatures, TData>;
+  columns: Column<DataTableFeatures, TData>[];
+}
+
+function FilterFieldSelector<TData extends RowData>({
+  filter,
+  column,
+  columns,
+  open,
+  onOpenChange,
+  onFilterUpdate,
+}: FilterFieldSelectorProps<TData>) {
+  const dir = useDirection();
+  const columnMeta = column.columnDef.meta;
+
+  return (
+    <Faceted
+      open={open}
+      onOpenChange={onOpenChange}
+      value={filter.id}
+      onValueChange={(columnId) => {
+        const column = columns.find((column) => column.id === columnId);
+        if (column) {
+          onFilterUpdate(filter.filterId, getDefaultFilter(column));
+        }
+      }}
+    >
+      <FacetedTrigger
+        render={
+          <Button
+            variant="ghost"
+            className="border-input dark:bg-input/30 min-w-0 shrink rounded-none rounded-s-md border border-e-0"
+          />
+        }
+      >
+        {columnMeta?.icon && <columnMeta.icon className="text-muted-foreground" />}
+        <bdi className="truncate">{columnMeta?.label ?? column.id}</bdi>
+      </FacetedTrigger>
+      <FacetedContent dir={dir} className="w-48">
+        <FacetedInput placeholder="Search fields..." />
+        <FacetedList>
+          <FacetedEmpty>No fields found.</FacetedEmpty>
+          <FacetedGroup>
+            {columns.map((column) => (
+              <FacetedItem key={column.id} value={column.id}>
+                <ColumnLabel column={column} />
+                <FacetedItemIndicator />
+              </FacetedItem>
+            ))}
+          </FacetedGroup>
+        </FacetedList>
+      </FacetedContent>
+    </Faceted>
+  );
+}
+
+interface FilterOperatorSelectorProps extends FilterSelectorProps {
+  label: string;
+  listboxId: string;
+}
+
+function FilterOperatorSelector({
+  filter,
+  label,
+  listboxId,
+  open,
+  onOpenChange,
+  onFilterUpdate,
+}: FilterOperatorSelectorProps) {
+  const dir = useDirection();
+  return (
+    <Select
+      open={open}
+      onOpenChange={onOpenChange}
+      value={filter.operator}
+      items={getFilterOperators(filter.variant)}
+      onValueChange={(operator) => {
+        if (operator == null) return;
+        onFilterUpdate(filter.filterId, {
+          operator,
+          value: coerceFilterValue(operator, filter.value),
+        });
+      }}
+    >
+      <SelectTrigger
+        aria-controls={listboxId}
+        aria-label={`${label} filter operator`}
+        className="h-8 rounded-none border-e-0 px-2.5 lowercase data-size:h-8 [&_svg]:hidden"
+      >
+        <SelectValue placeholder={filter.operator} />
+      </SelectTrigger>
+      <SelectContent dir={dir} id={listboxId}>
+        <SelectGroup>
+          {getFilterOperators(filter.variant).map((operator) => (
+            <SelectItem key={operator.value} value={operator.value} className="lowercase">
+              {operator.label}
+            </SelectItem>
+          ))}
+        </SelectGroup>
+      </SelectContent>
+    </Select>
+  );
+}
+
+interface FilterValueInputProps<TData extends RowData> extends FilterSelectorProps {
+  column: Column<DataTableFeatures, TData>;
+  inputId: string;
+}
+
+function FilterValueInput<TData extends RowData>(props: FilterValueInputProps<TData>) {
+  const { filter, column, inputId, onFilterUpdate } = props;
+  const columnMeta = column.columnDef.meta;
+
+  if (getIsValuelessOperator(filter.operator)) {
+    return (
+      <div
+        id={inputId}
+        role="status"
+        aria-label={`${columnMeta?.label ?? column.id} filter is ${
+          filter.operator === 'isEmpty' ? 'empty' : 'not empty'
+        }`}
+        aria-live="polite"
+        className="border-input text-muted-foreground dark:bg-input/30 h-full w-16 rounded-none border border-dashed bg-transparent px-1.5 py-0.5"
+      />
+    );
+  }
+
+  switch (filter.variant) {
+    case 'text':
+    case 'number':
+      if (filter.operator === 'isBetween') {
+        return (
+          <DataTableRangeFilter
+            filter={filter}
+            column={column}
+            inputId={inputId}
+            onFilterUpdate={onFilterUpdate}
+            className="h-full w-40 min-w-32 shrink gap-0 **:data-[slot='data-table-range-filter-min']:border-e-0 **:data-[slot='data-table-range-filter-separator']:sr-only [&_input]:min-w-16 [&_input]:rounded-none [&_input]:px-1.5"
+          />
+        );
+      }
+
+      return (
+        <Input
+          id={inputId}
+          type={filter.variant === 'text' ? 'text' : 'number'}
+          aria-label={`${columnMeta?.label ?? column.id} filter value`}
+          inputMode={filter.variant === 'text' ? undefined : 'numeric'}
+          placeholder={columnMeta?.placeholder ?? 'Enter value...'}
+          className="h-full w-24 min-w-0 shrink rounded-none px-1.5"
+          defaultValue={typeof filter.value === 'string' ? filter.value : ''}
+          onChange={(event) => onFilterUpdate(filter.filterId, { value: event.target.value })}
+        />
+      );
+
+    case 'boolean':
+      return <BooleanFilterValue {...props} />;
+
+    case 'select':
+      return <SelectFilterValue {...props} />;
+
+    case 'date':
+      return <DateFilterValue {...props} />;
+
+    default:
+      return null;
+  }
+}
+
+function BooleanFilterValue<TData extends RowData>({
+  filter,
+  column,
+  inputId,
+  open,
+  onOpenChange,
+  onFilterUpdate,
+}: FilterValueInputProps<TData>) {
+  const dir = useDirection();
+  const listboxId = `${inputId}-listbox`;
+
+  return (
+    <Select
+      open={open}
+      onOpenChange={onOpenChange}
+      value={typeof filter.value === 'string' && filter.value !== '' ? filter.value : null}
+      items={BOOLEAN_OPTIONS}
+      onValueChange={(value) => {
+        if (value == null) return;
+        onFilterUpdate(filter.filterId, { value });
+      }}
+    >
+      <SelectTrigger
+        id={inputId}
+        aria-controls={listboxId}
+        aria-label={`${column.columnDef.meta?.label ?? column.id} boolean filter`}
+        className="rounded-none bg-transparent px-1.5 py-0.5 [&_svg]:hidden"
+      >
+        <SelectValue placeholder="Select value" />
+      </SelectTrigger>
+      <SelectContent dir={dir} id={listboxId}>
+        <SelectGroup>
+          <SelectItem value="true">True</SelectItem>
+          <SelectItem value="false">False</SelectItem>
+        </SelectGroup>
+      </SelectContent>
+    </Select>
+  );
+}
+
+function SelectFilterValue<TData extends RowData>({
+  filter,
+  column,
+  inputId,
+  open,
+  onOpenChange,
+  onFilterUpdate,
+}: FilterValueInputProps<TData>) {
+  const dir = useDirection();
+  const listboxId = `${inputId}-listbox`;
+  const columnMeta = column.columnDef.meta;
+  const options = getColumnSelectOptions(columnMeta);
+  const value = getSelectFilterValue(filter);
+  const multiple = filter.operator === 'inArray' || filter.operator === 'notInArray';
+
+  return (
+    <Faceted
+      open={open}
+      onOpenChange={onOpenChange}
+      value={value}
+      onValueChange={(value) => onFilterUpdate(filter.filterId, { value: value ?? '' })}
+      items={options}
+      multiple={multiple}
+    >
+      <FacetedTrigger
+        render={
+          <Button
+            id={inputId}
+            aria-controls={listboxId}
+            aria-label={`${columnMeta?.label ?? column.id} filter value${multiple ? 's' : ''}`}
+            variant="ghost"
+            className="border-input dark:bg-input/30 h-full min-w-16 shrink rounded-none border px-1.5"
+          />
+        }
+      >
+        <SelectedOptions
+          options={options}
+          value={value}
+          placeholder={columnMeta?.placeholder ?? `Select option${multiple ? 's' : ''}...`}
+        />
+      </FacetedTrigger>
+      <FacetedContent dir={dir} id={listboxId} className="w-48">
+        <FacetedInput
+          aria-label={`Search ${columnMeta?.label ?? column.id} options`}
+          placeholder={columnMeta?.placeholder ?? 'Search options...'}
+        />
+        <FacetedList>
+          <FacetedEmpty>No options found.</FacetedEmpty>
+          <FacetedGroup>
+            {options.map((option) => (
+              <FacetedItem key={option.value} value={option.value}>
+                {option.icon && <option.icon />}
+                <bdi className="truncate">{option.label}</bdi>
+                <FacetedItemIndicator />
+              </FacetedItem>
+            ))}
+          </FacetedGroup>
+        </FacetedList>
+      </FacetedContent>
+    </Faceted>
+  );
+}
+
+interface SelectedOptionsProps {
+  options: ColumnSelectOption[];
+  value: string | string[] | undefined;
+  placeholder: string;
+}
+
+function SelectedOptions({ options, value, placeholder }: SelectedOptionsProps) {
+  const selectedValues = Array.isArray(value) ? value : [value];
+  const selectedOptions = options.filter((option) => selectedValues.includes(option.value));
+
+  if (selectedOptions.length === 0) return placeholder;
+
+  return (
+    <>
+      <div className="flex items-center -space-x-2 rtl:space-x-reverse">
+        {selectedOptions.map(
+          (option) =>
+            option.icon && (
+              <div key={option.value} className="bg-background rounded-full border p-0.5">
+                <option.icon className="size-3.5" />
+              </div>
+            )
+        )}
+      </div>
+      <bdi className="truncate">
+        {selectedOptions.length > 1 ? <bdi>{`${selectedOptions.length} selected`}</bdi> : selectedOptions[0]?.label}
+      </bdi>
+    </>
+  );
+}
+
+function DateFilterValue<TData extends RowData>({
+  filter,
+  column,
+  inputId,
+  open,
+  onOpenChange,
+  onFilterUpdate,
+}: FilterValueInputProps<TData>) {
+  const dir = useDirection();
+  const listboxId = `${inputId}-listbox`;
+  const label = column.columnDef.meta?.label ?? column.id;
+  const [startDate, endDate] = getFilterDates(filter.value);
+
+  return (
+    <Popover open={open} onOpenChange={onOpenChange}>
+      <PopoverTrigger
+        render={
+          <Button
+            id={inputId}
+            aria-controls={listboxId}
+            aria-label={`${label} date filter`}
+            variant="ghost"
+            className={cn(
+              'dark:bg-input/30 h-full min-w-0 shrink rounded-none border px-1.5',
+              !startDate && 'text-muted-foreground'
+            )}
+          />
+        }
+      >
+        <CalendarIcon className="size-3.5" />
+        <bdi className="truncate">{getDateFilterLabel(filter) ?? 'Pick date...'}</bdi>
+      </PopoverTrigger>
+      <PopoverContent dir={dir} id={listboxId} align="start" className="w-auto p-0">
+        {filter.operator === 'isBetween' ? (
+          <Calendar
+            aria-label={`Select ${label} date range`}
+            autoFocus
+            captionLayout="dropdown"
+            mode="range"
+            selected={startDate ? { from: startDate, to: endDate } : undefined}
+            onSelect={(range) =>
+              onFilterUpdate(filter.filterId, {
+                value: range ? [getFilterDateValue(range.from), getFilterDateValue(range.to)] : [],
+              })
+            }
+          />
+        ) : (
+          <Calendar
+            aria-label={`Select ${label} date`}
+            autoFocus
+            captionLayout="dropdown"
+            mode="single"
+            selected={startDate}
+            onSelect={(date) => {
+              onFilterUpdate(filter.filterId, {
+                value: getFilterDateValue(date),
+              });
+              onOpenChange(false);
+            }}
+          />
+        )}
+      </PopoverContent>
+    </Popover>
+  );
+}
+
+interface FilterValueOptionsProps<TData extends RowData> {
+  column: Column<DataTableFeatures, TData>;
+  search: string;
+  onSelect: (value: string) => void;
+}
+
+function FilterValueOptions<TData extends RowData>({ column, search, onSelect }: FilterValueOptionsProps<TData>) {
+  const columnMeta = column.columnDef.meta;
+
+  switch (getFilterVariant(columnMeta)) {
+    case 'boolean':
+      return (
+        <CommandGroup>
+          <CommandItem value="true" onSelect={() => onSelect('true')}>
+            True
+          </CommandItem>
+          <CommandItem value="false" onSelect={() => onSelect('false')}>
+            False
+          </CommandItem>
+        </CommandGroup>
+      );
+
+    case 'select':
+      return (
+        <>
+          <CommandEmpty>No options found.</CommandEmpty>
+          <CommandGroup>
+            {getColumnSelectOptions(columnMeta).map((option) => (
+              <CommandItem
+                key={option.value}
+                value={option.value}
+                keywords={[option.label]}
+                className="[&>svg:last-child]:hidden"
+                onSelect={() => onSelect(option.value)}
+              >
+                {option.icon && <option.icon />}
+                <bdi className="truncate">{option.label}</bdi>
+                {option.count !== undefined && <span className="ms-auto font-mono text-xs">{option.count}</span>}
+              </CommandItem>
+            ))}
+          </CommandGroup>
+        </>
+      );
+
+    case 'date':
+      return (
+        <Calendar
+          autoFocus
+          captionLayout="dropdown"
+          mode="single"
+          onSelect={(date) => onSelect(getFilterDateValue(date))}
+        />
+      );
+
+    default:
+      return <TextFilterValueOption search={search} onSelect={onSelect} />;
+  }
+}
+
+interface TextFilterValueOptionProps {
+  search: string;
+  onSelect: (value: string) => void;
+}
+
+function TextFilterValueOption({ search, onSelect }: TextFilterValueOptionProps) {
+  const isEmpty = !search.trim();
+
+  return (
+    <CommandGroup>
+      <CommandItem value={search} disabled={isEmpty} onSelect={() => onSelect(search)}>
+        {isEmpty ? (
+          <>
+            <Text />
+            <span>Type to add filter...</span>
+          </>
+        ) : (
+          <>
+            <BadgeCheck />
+            <span className="truncate">Filter by &quot;{search}&quot;</span>
+          </>
+        )}
+      </CommandItem>
+    </CommandGroup>
+  );
+}
+
+interface FilterFieldOptionsProps<TData extends RowData> {
+  columns: Column<DataTableFeatures, TData>[];
+  onSelect: (column: Column<DataTableFeatures, TData>) => void;
+}
+
+function FilterFieldOptions<TData extends RowData>({ columns, onSelect }: FilterFieldOptionsProps<TData>) {
+  return (
+    <>
+      <CommandEmpty>No fields found.</CommandEmpty>
+      <CommandGroup>
+        {columns.map((column) => (
+          <CommandItem key={column.id} value={column.id} onSelect={() => onSelect(column)}>
+            <ColumnLabel column={column} />
+          </CommandItem>
+        ))}
+      </CommandGroup>
+    </>
+  );
+}
+
+interface ColumnLabelProps<TData extends RowData> {
+  column: Column<DataTableFeatures, TData>;
+}
+
+function ColumnLabel<TData extends RowData>({ column }: ColumnLabelProps<TData>) {
+  const columnMeta = column.columnDef.meta;
+
+  return (
+    <>
+      {columnMeta?.icon && <columnMeta.icon />}
+      <bdi className="truncate">{columnMeta?.label ?? column.id}</bdi>
+    </>
+  );
+}

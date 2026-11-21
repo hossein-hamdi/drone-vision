@@ -2,6 +2,8 @@
 
 import { ThemeProvider } from 'next-themes';
 
+import { NuqsAdapter } from 'nuqs/adapters/next/app';
+
 import ClientProvider from '@core/client/provider';
 
 import Toaster from '@components/toast/toaster';
@@ -14,10 +16,12 @@ interface ProvidersProps {
 const Providers = ({ children }: ProvidersProps) => (
   <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
     <ClientProvider>
-      <TooltipProvider>
-        {children}
-        <Toaster />
-      </TooltipProvider>
+      <NuqsAdapter>
+        <TooltipProvider>
+          {children}
+          <Toaster />
+        </TooltipProvider>
+      </NuqsAdapter>
     </ClientProvider>
   </ThemeProvider>
 );
