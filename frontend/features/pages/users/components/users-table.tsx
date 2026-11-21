@@ -8,6 +8,9 @@ import { getUsersKeyGenerator, type GetUsersRequestData, type GetUsersResponse }
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { parseAsInteger, useQueryStates } from 'nuqs';
 
+import { PERMISSIONS } from '@core/auth';
+
+import { useAuth } from '@hooks/use-auth';
 import { useDeleteConfirmation } from '@hooks/use-delete-confirmation';
 
 import { useToast } from '@stores/toast';
@@ -77,6 +80,10 @@ export function UsersTable() {
   const [editingUserId, setEditingUserId] = React.useState<string | null>(null);
   const queryClient = useQueryClient();
   const { showToast } = useToast();
+  const { can } = useAuth();
+  const canViewRoles = can(PERMISSIONS.roles.view);
+  const canEditUsers = can(PERMISSIONS.users.update);
+  const canDeleteUsers = can(PERMISSIONS.users.delete);
 
   const [{ page, perPage, fullName, roles, createdAt }] = useQueryStates({
     page: parseAsInteger.withDefault(1),
@@ -108,6 +115,7 @@ export function UsersTable() {
 
   const { data: rolesData } = useQuery<GetRolesResponse>({
     queryKey: getRolesKeyGenerator({ Page: 1, PageSize: 100 }),
+    enabled: canViewRoles,
   });
 
   const { mutateAsync: deleteUserAsync } = useMutation<void, Error, DeleteUserRequestData>({
@@ -132,8 +140,10 @@ export function UsersTable() {
         roles: rolesData?.items ?? [],
         onEdit: (user) => setEditingUserId(user.id),
         onDelete: (user) => openModal(user),
+        canEdit: canEditUsers,
+        canDelete: canDeleteUsers,
       }),
-    [rolesData, openModal]
+    [rolesData, openModal, canEditUsers, canDeleteUsers]
   );
 
   const { table } = useDataTable({
@@ -155,23 +165,27 @@ export function UsersTable() {
         </DataTableToolbar>
       </DataTable>
 
-      <EditUserDialog
-        userId={editingUserId}
-        open={editingUserId !== null}
-        onOpenChange={(open) => {
-          if (!open) setEditingUserId(null);
-        }}
-      />
+      {canEditUsers && (
+        <EditUserDialog
+          userId={editingUserId}
+          open={editingUserId !== null}
+          onOpenChange={(open) => {
+            if (!open) setEditingUserId(null);
+          }}
+        />
+      )}
 
-      <DeleteUserDialog
-        open={isModalOpen}
-        userName={itemToDelete?.fullName || itemToDelete?.userName}
-        isDeleting={deletingId !== null}
-        onOpenChange={(open) => {
-          if (!open) closeModal();
-        }}
-        onConfirm={() => void confirmDelete()}
-      />
+      {canDeleteUsers && (
+        <DeleteUserDialog
+          open={isModalOpen}
+          userName={itemToDelete?.fullName || itemToDelete?.userName}
+          isDeleting={deletingId !== null}
+          onOpenChange={(open) => {
+            if (!open) closeModal();
+          }}
+          onConfirm={() => void confirmDelete()}
+        />
+      )}
     </>
   );
 }

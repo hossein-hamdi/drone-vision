@@ -29,12 +29,16 @@ export function getUsersColumns({
   roles,
   onEdit,
   onDelete,
+  canEdit = true,
+  canDelete = true,
 }: {
   roles: RoleItem[];
   onEdit: (user: ManagedUser) => void;
   onDelete: (user: ManagedUser) => void;
+  canEdit?: boolean;
+  canDelete?: boolean;
 }): ColumnDef<DataTableFeatures, ManagedUser>[] {
-  return [
+  const columns: ColumnDef<DataTableFeatures, ManagedUser>[] = [
     {
       id: 'id',
       accessorKey: 'id',
@@ -117,19 +121,30 @@ export function getUsersColumns({
       enableColumnFilter: true,
       enableSorting: false,
     },
-    getDataTableActionsColumn<ManagedUser>({
-      actions: ({ row }) => (
-        <DropdownMenuGroup>
-          <DropdownMenuItem onClick={() => onEdit(row.original)}>
-            <Pencil aria-hidden="true" />
-            Edit
-          </DropdownMenuItem>
-          <DropdownMenuItem variant="destructive" onClick={() => onDelete(row.original)}>
-            <Trash2 aria-hidden="true" />
-            Delete
-          </DropdownMenuItem>
-        </DropdownMenuGroup>
-      ),
-    }),
   ];
+
+  if (canEdit || canDelete) {
+    columns.push(
+      getDataTableActionsColumn<ManagedUser>({
+        actions: ({ row }) => (
+          <DropdownMenuGroup>
+            {canEdit && (
+              <DropdownMenuItem onClick={() => onEdit(row.original)}>
+                <Pencil aria-hidden="true" />
+                Edit
+              </DropdownMenuItem>
+            )}
+            {canDelete && (
+              <DropdownMenuItem variant="destructive" onClick={() => onDelete(row.original)}>
+                <Trash2 aria-hidden="true" />
+                Delete
+              </DropdownMenuItem>
+            )}
+          </DropdownMenuGroup>
+        ),
+      })
+    );
+  }
+
+  return columns;
 }

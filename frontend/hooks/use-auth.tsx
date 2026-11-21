@@ -9,6 +9,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import type { AuthUser } from '@types';
 
+import { hasAllPermissions, hasAnyPermission, hasPermission, type Permission } from '@core/auth';
 import { beginSignout } from '@core/client/auth-handler';
 import { ApiError } from '@core/errors';
 
@@ -60,11 +61,18 @@ export function useAuth() {
     await refetch();
   }, [refetch]);
 
+  const can = useCallback((permission: Permission) => hasPermission(user, permission), [user]);
+  const canAny = useCallback((permissions: readonly Permission[]) => hasAnyPermission(user, permissions), [user]);
+  const canAll = useCallback((permissions: readonly Permission[]) => hasAllPermissions(user, permissions), [user]);
+
   return {
     user: user ?? null,
     loading,
     error: error?.message ?? null,
     isUnauthorized: error instanceof ApiError && error.status === 401,
+    can,
+    canAny,
+    canAll,
     logout,
     refetch: refetchUser,
     updateUser,

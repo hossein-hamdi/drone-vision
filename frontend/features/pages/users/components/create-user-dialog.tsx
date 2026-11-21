@@ -11,6 +11,9 @@ import { Controller, useForm } from 'react-hook-form';
 
 import { createUserSchema, type CreateUserSchema } from '@schemas';
 
+import { PERMISSIONS } from '@core/auth';
+
+import { useAuth } from '@hooks/use-auth';
 import { isAbortError, useModalAbort } from '@hooks/use-modal-abort';
 
 import { useToast } from '@stores/toast';
@@ -33,11 +36,12 @@ export function CreateUserDialog() {
   const [open, setOpen] = React.useState(false);
   const queryClient = useQueryClient();
   const { showToast } = useToast();
+  const { can } = useAuth();
   const { createSignal, abort } = useModalAbort({ open });
 
   const { data: rolesData } = useQuery<GetRolesResponse>({
     queryKey: getRolesKeyGenerator({ Page: 1, PageSize: 100 }),
-    enabled: open,
+    enabled: open && can(PERMISSIONS.roles.view),
   });
 
   const form = useForm<CreateUserSchema>({

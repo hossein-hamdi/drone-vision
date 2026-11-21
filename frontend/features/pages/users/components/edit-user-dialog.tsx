@@ -21,6 +21,9 @@ import { Controller, useForm } from 'react-hook-form';
 
 import { editUserSchema, type EditUserSchema } from '@schemas';
 
+import { PERMISSIONS } from '@core/auth';
+
+import { useAuth } from '@hooks/use-auth';
 import { isAbortError, useModalAbort } from '@hooks/use-modal-abort';
 
 import { useToast } from '@stores/toast';
@@ -57,6 +60,7 @@ function getInitials(fullName: string, userName: string): string {
 export function EditUserDialog({ userId, open, onOpenChange }: EditUserDialogProps) {
   const queryClient = useQueryClient();
   const { showToast } = useToast();
+  const { can } = useAuth();
   const fileInputRef = React.useRef<HTMLInputElement | null>(null);
 
   const userQueryKey = React.useMemo(() => (userId ? getUserKeyGenerator({ id: userId }) : undefined), [userId]);
@@ -73,7 +77,7 @@ export function EditUserDialog({ userId, open, onOpenChange }: EditUserDialogPro
 
   const { data: rolesData } = useQuery<GetRolesResponse>({
     queryKey: getRolesKeyGenerator({ Page: 1, PageSize: 100 }),
-    enabled: open,
+    enabled: open && can(PERMISSIONS.roles.view),
   });
 
   const form = useForm<EditUserSchema>({

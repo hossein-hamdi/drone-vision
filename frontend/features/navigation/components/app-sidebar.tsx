@@ -18,11 +18,15 @@ import {
   useSidebar,
 } from '@components/ui/sidebar';
 
+import { useAuth } from '@hooks/use-auth';
+
 import { sidebar } from '@/constant/sidebar';
 
 export default function AppSidebar() {
   const pathname = usePathname();
   const { setOpenMobile } = useSidebar();
+  const { can } = useAuth();
+  const visibleItems = sidebar.filter((item) => !item.permission || can(item.permission));
 
   return (
     <Sidebar collapsible="icon" aria-label="Main navigation">
@@ -41,7 +45,7 @@ export default function AppSidebar() {
           <SidebarGroupLabel>Workspace</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {sidebar.map((item) => {
+              {visibleItems.map((item) => {
                 const isActive = item.url === pathname;
 
                 return (
