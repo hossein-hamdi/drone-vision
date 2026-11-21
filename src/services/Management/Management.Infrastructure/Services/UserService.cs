@@ -101,6 +101,15 @@ public sealed class UserService(ManagementDbContext db, UserManager<ApplicationU
         return new(user.Id, user.FullName, user.UserName, user.ProfileImageUrl, user.Roles);
     }
 
+    public async Task<ProfileDto> UpdateProfileAsync(int id, UpdateProfileRequest request, CancellationToken ct)
+    {
+        var user = await users.FindByIdAsync(id.ToString()) ?? throw ApiException.NotFound("User");
+        user.FullName = request.FullName.Trim();
+        user.UserName = request.UserName.Trim();
+        IdentityErrors.EnsureSuccess(await users.UpdateAsync(user));
+        return await ProfileAsync(id, ct);
+    }
+
     public async Task<AuthenticatedUserDto> GetAuthenticationAsync(int id, CancellationToken ct)
     {
         var user = await GetAsync(id, ct);

@@ -10,6 +10,7 @@ public interface IUserService
     Task<UserDto> UpdateAsync(int id, UpdateUserRequest request, CancellationToken ct);
     Task DeleteAsync(int id, CancellationToken ct);
     Task<ProfileDto> ProfileAsync(int id, CancellationToken ct);
+    Task<ProfileDto> UpdateProfileAsync(int id, UpdateProfileRequest request, CancellationToken ct);
     Task<AuthenticatedUserDto> GetAuthenticationAsync(int id, CancellationToken ct);
 }
 public interface IRoleService

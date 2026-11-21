@@ -15,6 +15,12 @@ public sealed class ProfileController(IUserService users, IProfileImageService i
     [ProducesResponseType<ProfileDto>(200)]
     public async Task<ActionResult<ProfileDto>> Profile(CancellationToken ct) => Ok(await users.ProfileAsync(CurrentUserId, ct));
 
+    /// <summary>Update the current user's public profile. Roles and password are unchanged.</summary>
+    [HttpPut("profile")]
+    [ProducesResponseType<ProfileDto>(200)]
+    public async Task<ActionResult<ProfileDto>> UpdateProfile(UpdateProfileRequest request, CancellationToken ct) =>
+        Ok(await users.UpdateProfileAsync(CurrentUserId, request, ct));
+
     /// <summary>Upload a JPEG, PNG, or WebP profile image (maximum 5 MiB).</summary>
     [HttpPost("profile-image")]
     [Consumes("multipart/form-data")]

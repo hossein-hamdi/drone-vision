@@ -26,6 +26,11 @@ public sealed class UpdateUserRequest
     [Required, StringLength(256)] public string UserName { get; init; } = "";
     [Required, MaxLength(100)] public string[] Roles { get; init; } = [];
 }
+public sealed class UpdateProfileRequest
+{
+    [Required, StringLength(200)] public string FullName { get; init; } = "";
+    [Required, StringLength(256)] public string UserName { get; init; } = "";
+}
 public sealed class RoleRequest
 {
     [Required, StringLength(256)] public string Name { get; init; } = "";
