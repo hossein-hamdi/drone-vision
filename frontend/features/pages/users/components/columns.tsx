@@ -6,13 +6,13 @@ import type { ColumnDef } from '@tanstack/react-table';
 import { Pencil, Trash2 } from 'lucide-react';
 
 import { DataTableColumnHeader, getDataTableActionsColumn } from '@/components/data-table';
-import type { DataTableFeatures } from '@/components/data-table/lib';
+import { type DataTableFeatures, formatDate } from '@/components/data-table/lib';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { DropdownMenuGroup, DropdownMenuItem } from '@/components/ui/dropdown-menu';
 
 type ManagedUser = GetUsersResponse['items'][number];
-type RoleItem = GetRolesResponse[number];
+type RoleItem = GetRolesResponse['items'][number];
 
 function getInitials(fullName: string, userName: string): string {
   const source = fullName.trim() || userName.trim();
@@ -97,6 +97,22 @@ export function getUsersColumns({
           label: role.name,
           value: role.name,
         })),
+      },
+      enableColumnFilter: true,
+      enableSorting: false,
+    },
+    {
+      id: 'createdAt',
+      accessorKey: 'createdAt',
+      header: ({ column }) => <DataTableColumnHeader column={column} label="Created at" />,
+      cell: ({ row }) => (
+        <span className="text-muted-foreground text-xs whitespace-nowrap tabular-nums">
+          {formatDate(row.original.createdAt)}
+        </span>
+      ),
+      meta: {
+        label: 'Created at',
+        variant: 'date',
       },
       enableColumnFilter: true,
       enableSorting: false,

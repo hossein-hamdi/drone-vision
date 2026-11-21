@@ -11,17 +11,34 @@ namespace Management.Infrastructure.Services;
 
 public sealed class RoleService(ManagementDbContext db, RoleManager<ApplicationRole> roles) : IRoleService
 {
-    private IQueryable<RoleDto> Query(int? id = null) => db.Roles.AsNoTracking()
-        .Where(r => id == null || r.Id == id).OrderBy(r => r.Id).Select(r => new RoleDto(r.Id, r.Name!,
+    private IQueryable<RoleDto> Project(IQueryable<ApplicationRole> query) => query.Select(r => new RoleDto(
+        r.Id, r.Name!,
         (from claim in db.RoleClaims
          where claim.RoleId == r.Id && claim.ClaimType == PermissionNames.ClaimType &&
              PermissionNames.All.Contains(claim.ClaimValue!)
          orderby claim.ClaimValue
-         select claim.ClaimValue!).ToArray()));
+         select claim.ClaimValue!).ToArray(),
+        r.CreatedAt, r.UpdatedAt));
 
-    public async Task<IReadOnlyList<RoleDto>> ListAsync(CancellationToken ct) => await Query().ToListAsync(ct);
+    public async Task<PagedResult<RoleDto>> ListAsync(RoleFilter filter, CancellationToken ct)
+    {
+        var offset = ((long)filter.Page - 1) * filter.PageSize;
+        if (filter.Page < 1 || filter.PageSize is < 1 or > 100 || offset > int.MaxValue)
+            throw ApiException.Validation("page", "Pagination is outside the supported range.");
+        var query = db.Roles.AsNoTracking().WhereCreatedBetween(filter.CreatedAtFrom, filter.CreatedAtTo);
+        if (!string.IsNullOrWhiteSpace(filter.RoleName))
+        {
+            var roleName = filter.RoleName.Trim();
+            query = query.Where(r => r.Name!.Contains(roleName));
+        }
+        var total = await query.CountAsync(ct);
+        var items = await Project(query.OrderBy(r => r.Id).Skip((int)offset).Take(filter.PageSize)).ToListAsync(ct);
+        return new(items, filter.Page, filter.PageSize, total);
+    }
+
     public async Task<RoleDto> GetAsync(int id, CancellationToken ct) =>
-        await Query(id).SingleOrDefaultAsync(ct) ?? throw ApiException.NotFound("Role");
+        await Project(db.Roles.AsNoTracking().Where(r => r.Id == id)).SingleOrDefaultAsync(ct)
+        ?? throw ApiException.NotFound("Role");
 
     public async Task<RoleDto> CreateAsync(RoleRequest request, CancellationToken ct)
     {
@@ -29,7 +46,7 @@ public sealed class RoleService(ManagementDbContext db, RoleManager<ApplicationR
         await using var transaction = await db.Database.BeginTransactionAsync(ct);
         var role = new ApplicationRole { Name = request.Name.Trim() };
         IdentityErrors.EnsureSuccess(await roles.CreateAsync(role));
-        db.RoleClaims.AddRange(permissions.Select(name => new IdentityRoleClaim<int>
+        db.RoleClaims.AddRange(permissions.Select(name => new ApplicationRoleClaim
         {
             RoleId = role.Id,
             ClaimType = PermissionNames.ClaimType,
@@ -53,7 +70,7 @@ public sealed class RoleService(ManagementDbContext db, RoleManager<ApplicationR
         // Identity's concurrency stamp prevents simultaneous permission edits from silently overwriting each other.
         IdentityErrors.EnsureSuccess(await roles.UpdateAsync(role));
         await db.RoleClaims.Where(c => c.RoleId == id && c.ClaimType == PermissionNames.ClaimType).ExecuteDeleteAsync(ct);
-        db.RoleClaims.AddRange(permissions.Select(name => new IdentityRoleClaim<int>
+        db.RoleClaims.AddRange(permissions.Select(name => new ApplicationRoleClaim
         {
             RoleId = id,
             ClaimType = PermissionNames.ClaimType,

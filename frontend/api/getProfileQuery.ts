@@ -12,6 +12,8 @@ const responseSchema = z.object({
     .nullish()
     .transform((url) => url ?? ''),
   roles: z.array(z.string()),
+  createdAt: z.string(),
+  updatedAt: z.string(),
 });
 
 type RequestData = void;

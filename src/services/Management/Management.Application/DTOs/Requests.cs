@@ -40,6 +40,16 @@ public sealed class UserFilter
 {
     [StringLength(256)] public string? Role { get; init; }
     [StringLength(256)] public string? Name { get; init; }
+    public DateTime? CreatedAtFrom { get; init; }
+    public DateTime? CreatedAtTo { get; init; }
+    [Range(1, int.MaxValue)] public int Page { get; init; } = 1;
+    [Range(1, 100)] public int PageSize { get; init; } = 10;
+}
+public sealed class RoleFilter
+{
+    [StringLength(256)] public string? RoleName { get; init; }
+    public DateTime? CreatedAtFrom { get; init; }
+    public DateTime? CreatedAtTo { get; init; }
     [Range(1, int.MaxValue)] public int Page { get; init; } = 1;
     [Range(1, 100)] public int PageSize { get; init; } = 10;
 }

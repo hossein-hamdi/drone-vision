@@ -15,6 +15,8 @@ const responseSchema = z.object({
     .transform((url) => url ?? ''),
   roles: z.array(z.string()),
   permissions: z.array(z.string()),
+  createdAt: z.string(),
+  updatedAt: z.string(),
 });
 
 type RequestData = CreateUserSchema & { signal?: AbortSignal };

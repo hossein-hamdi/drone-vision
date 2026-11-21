@@ -32,7 +32,7 @@ public sealed class IdentityBootstrap(ManagementDbContext db, UserManager<Applic
         }
         var assigned = await db.RoleClaims.Where(c => c.RoleId == admin.Id && c.ClaimType == PermissionNames.ClaimType)
             .Select(c => c.ClaimValue).ToListAsync(ct);
-        db.RoleClaims.AddRange(PermissionNames.All.Except(assigned).Select(name => new IdentityRoleClaim<int>
+        db.RoleClaims.AddRange(PermissionNames.All.Except(assigned).Select(name => new ApplicationRoleClaim
         {
             RoleId = admin.Id,
             ClaimType = PermissionNames.ClaimType,

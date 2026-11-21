@@ -15,7 +15,7 @@ public interface IUserService
 }
 public interface IRoleService
 {
-    Task<IReadOnlyList<RoleDto>> ListAsync(CancellationToken ct);
+    Task<PagedResult<RoleDto>> ListAsync(RoleFilter filter, CancellationToken ct);
     Task<RoleDto> GetAsync(int id, CancellationToken ct);
     Task<RoleDto> CreateAsync(RoleRequest request, CancellationToken ct);
     Task<RoleDto> UpdateAsync(int id, RoleRequest request, CancellationToken ct);

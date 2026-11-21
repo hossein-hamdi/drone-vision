@@ -5,4 +5,6 @@ export interface AuthUser {
   profileImageUrl: string;
   roles: string[];
   permissions: string[];
+  createdAt: string;
+  updatedAt: string;
 }

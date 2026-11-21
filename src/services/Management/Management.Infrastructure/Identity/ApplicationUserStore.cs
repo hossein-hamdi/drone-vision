@@ -8,8 +8,8 @@ namespace Management.Infrastructure.Identity;
 // The built-in store assumes composite primary keys for these three records.
 // Query their unique business keys explicitly while retaining integer identity primary keys.
 public sealed class ApplicationUserStore(ManagementDbContext db, IdentityErrorDescriber describer)
-    : UserStore<ApplicationUser, ApplicationRole, ManagementDbContext, int, IdentityUserClaim<int>,
-        ApplicationUserRole, ApplicationUserLogin, ApplicationUserToken, IdentityRoleClaim<int>>(db, describer)
+    : UserStore<ApplicationUser, ApplicationRole, ManagementDbContext, int, ApplicationUserClaim,
+        ApplicationUserRole, ApplicationUserLogin, ApplicationUserToken, ApplicationRoleClaim>(db, describer)
 {
     protected override Task<ApplicationUserRole?> FindUserRoleAsync(int userId, int roleId, CancellationToken ct) =>
         Context.UserRoles.SingleOrDefaultAsync(x => x.UserId == userId && x.RoleId == roleId, ct);

@@ -13,7 +13,12 @@ import { useDeleteConfirmation } from '@hooks/use-delete-confirmation';
 import { useToast } from '@stores/toast';
 
 import { DataTable, DataTableSortMenu, DataTableToolbar } from '@/components/data-table';
-import { buildPagedQueryParams, getColumnFilterParser } from '@/components/data-table/lib';
+import {
+  buildPagedQueryParams,
+  type ColumnFilterItem,
+  getColumnFilterParser,
+  parseFilterDate,
+} from '@/components/data-table/lib';
 import { useDataTable } from '@/hooks/use-data-table';
 
 import { getUsersColumns } from './columns';
@@ -22,21 +27,68 @@ import { EditUserDialog } from './edit-user-dialog';
 
 type ManagedUser = GetUsersResponse['items'][number];
 
+function getCreatedAtRange(filters: ColumnFilterItem[] | null | undefined): {
+  CreatedAtFrom?: string;
+  CreatedAtTo?: string;
+} {
+  const item = filters?.[0];
+  if (!item) return {};
+
+  const values = Array.isArray(item.value) ? item.value : [item.value];
+  const first = values[0]?.trim();
+  const second = values[1]?.trim();
+
+  let rawFrom: string | undefined;
+  let rawTo: string | undefined;
+
+  switch (item.operator) {
+    case 'isBetween':
+      rawFrom = first;
+      rawTo = second || first;
+      break;
+    case 'eq':
+      rawFrom = first;
+      rawTo = first;
+      break;
+    case 'gt':
+    case 'gte':
+      rawFrom = first;
+      break;
+    case 'lt':
+    case 'lte':
+      rawTo = first;
+      break;
+    default:
+      return {};
+  }
+
+  const fromDate = rawFrom ? parseFilterDate(rawFrom) : undefined;
+  const toDate = rawTo ? parseFilterDate(rawTo) : undefined;
+  if (fromDate) fromDate.setHours(0, 0, 0, 0);
+  if (toDate) toDate.setHours(23, 59, 59, 999);
+
+  return {
+    CreatedAtFrom: fromDate?.toISOString(),
+    CreatedAtTo: toDate?.toISOString(),
+  };
+}
+
 export function UsersTable() {
   const [editingUserId, setEditingUserId] = React.useState<string | null>(null);
   const queryClient = useQueryClient();
   const { showToast } = useToast();
 
-  const [{ page, perPage, fullName, roles }] = useQueryStates({
+  const [{ page, perPage, fullName, roles, createdAt }] = useQueryStates({
     page: parseAsInteger.withDefault(1),
     perPage: parseAsInteger.withDefault(10),
     fullName: getColumnFilterParser('fullName', 'text'),
     roles: getColumnFilterParser('roles', 'select'),
+    createdAt: getColumnFilterParser('createdAt', 'date'),
   });
 
   const queryParams = React.useMemo<GetUsersRequestData>(
-    () =>
-      buildPagedQueryParams({
+    () => ({
+      ...buildPagedQueryParams({
         page,
         perPage,
         filters: {
@@ -44,7 +96,9 @@ export function UsersTable() {
           Role: roles,
         },
       }),
-    [page, perPage, fullName, roles]
+      ...getCreatedAtRange(createdAt),
+    }),
+    [page, perPage, fullName, roles, createdAt]
   );
 
   const { data } = useQuery<GetUsersResponse>({
@@ -53,7 +107,7 @@ export function UsersTable() {
   });
 
   const { data: rolesData } = useQuery<GetRolesResponse>({
-    queryKey: getRolesKeyGenerator(),
+    queryKey: getRolesKeyGenerator({ Page: 1, PageSize: 100 }),
   });
 
   const { mutateAsync: deleteUserAsync } = useMutation<void, Error, DeleteUserRequestData>({
@@ -75,7 +129,7 @@ export function UsersTable() {
   const columns = React.useMemo(
     () =>
       getUsersColumns({
-        roles: rolesData ?? [],
+        roles: rolesData?.items ?? [],
         onEdit: (user) => setEditingUserId(user.id),
         onDelete: (user) => openModal(user),
       }),

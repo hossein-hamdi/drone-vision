@@ -6,6 +6,8 @@ import type { QueryKeyGenerator } from '@core/client/@types';
 const requestDataSchema = z.object({
   Role: z.string().trim().min(1).optional(),
   Name: z.string().trim().min(1).optional(),
+  CreatedAtFrom: z.string().trim().min(1).optional(),
+  CreatedAtTo: z.string().trim().min(1).optional(),
   Page: z.number().int().min(1),
   PageSize: z.number().int().min(1).max(100),
 });
@@ -20,6 +22,8 @@ const userSchema = z.object({
     .transform((url) => url ?? ''),
   roles: z.array(z.string()),
   permissions: z.array(z.string()),
+  createdAt: z.string(),
+  updatedAt: z.string(),
 });
 
 const responseSchema = z.object({

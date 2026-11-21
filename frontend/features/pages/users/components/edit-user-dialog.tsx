@@ -72,7 +72,7 @@ export function EditUserDialog({ userId, open, onOpenChange }: EditUserDialogPro
   });
 
   const { data: rolesData } = useQuery<GetRolesResponse>({
-    queryKey: getRolesKeyGenerator(),
+    queryKey: getRolesKeyGenerator({ Page: 1, PageSize: 100 }),
     enabled: open,
   });
 
@@ -176,7 +176,7 @@ export function EditUserDialog({ userId, open, onOpenChange }: EditUserDialogPro
   };
 
   const isBusy = isUpdating || isUploadingImage || isDeletingImage;
-  const availableRoles = rolesData ?? [];
+  const availableRoles = rolesData?.items ?? [];
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>

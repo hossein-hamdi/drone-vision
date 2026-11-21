@@ -20,14 +20,14 @@ public sealed class UserService(ManagementDbContext db, UserManager<ApplicationU
          join r in db.Roles on ur.RoleId equals r.Id
          where ur.UserId == u.Id
          orderby r.Name
-         select r.Name!).ToArray(), Array.Empty<string>()));
+         select r.Name!).ToArray(), Array.Empty<string>(), u.CreatedAt, u.UpdatedAt));
 
     public async Task<PagedResult<UserDto>> ListAsync(UserFilter filter, CancellationToken ct)
     {
         var offset = ((long)filter.Page - 1) * filter.PageSize;
         if (filter.Page < 1 || filter.PageSize is < 1 or > 100 || offset > int.MaxValue)
             throw ApiException.Validation("page", "Pagination is outside the supported range.");
-        var query = db.Users.AsNoTracking();
+        var query = db.Users.AsNoTracking().WhereCreatedBetween(filter.CreatedAtFrom, filter.CreatedAtTo);
         if (!string.IsNullOrWhiteSpace(filter.Role))
         {
             var role = users.NormalizeName(filter.Role.Trim());
@@ -98,7 +98,7 @@ public sealed class UserService(ManagementDbContext db, UserManager<ApplicationU
     public async Task<ProfileDto> ProfileAsync(int id, CancellationToken ct)
     {
         var user = await FindAsync(id, ct);
-        return new(user.Id, user.FullName, user.UserName, user.ProfileImageUrl, user.Roles);
+        return new(user.Id, user.FullName, user.UserName, user.ProfileImageUrl, user.Roles, user.CreatedAt, user.UpdatedAt);
     }
 
     public async Task<ProfileDto> UpdateProfileAsync(int id, UpdateProfileRequest request, CancellationToken ct)
@@ -114,7 +114,7 @@ public sealed class UserService(ManagementDbContext db, UserManager<ApplicationU
     {
         var user = await GetAsync(id, ct);
         return new(user.Id, user.FullName, user.UserName, user.ProfileImageUrl, user.Roles,
-            user.Permissions);
+            user.Permissions, user.CreatedAt, user.UpdatedAt);
     }
 
     private async Task<string[]> ResolveRolesAsync(string[] names, CancellationToken ct)

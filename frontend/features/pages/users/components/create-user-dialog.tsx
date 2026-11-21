@@ -36,7 +36,7 @@ export function CreateUserDialog() {
   const { createSignal, abort } = useModalAbort({ open });
 
   const { data: rolesData } = useQuery<GetRolesResponse>({
-    queryKey: getRolesKeyGenerator(),
+    queryKey: getRolesKeyGenerator({ Page: 1, PageSize: 100 }),
     enabled: open,
   });
 
@@ -85,7 +85,7 @@ export function CreateUserDialog() {
     }
   };
 
-  const availableRoles = rolesData ?? [];
+  const availableRoles = rolesData?.items ?? [];
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
