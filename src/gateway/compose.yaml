@@ -17,4 +17,5 @@ services:
     depends_on:
       - frontend
       - management
+      - checker
     restart: unless-stopped

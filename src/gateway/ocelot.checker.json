@@ -1,0 +1,17 @@
+{
+  "Routes": [
+    {
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "checker",
+          "Port": 8080
+        }
+      ],
+      "DownstreamScheme": "http",
+      "DownstreamPathTemplate": "/api/checker/{everything}",
+      "Priority": 10,
+      "UpstreamHttpMethod": [],
+      "UpstreamPathTemplate": "/api/checker/{everything}"
+    }
+  ]
+}

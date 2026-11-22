@@ -1,0 +1,300 @@
+openapi: 3.0.3
+info:
+  title: DroneVision Network Checker API
+  version: v1
+  description: >
+    Standalone microservice that inspects wireless BSSIDs (MAC addresses) and optional SSIDs
+    against verified drone manufacturer IEEE OUI/MA-M allocations, shared drone Wi-Fi chipsets,
+    and known drone SSID patterns. Protected by Management-issued HS512 JWT bearer tokens.
+servers:
+  - url: /api/checker
+    description: Behind the Ocelot API Gateway (HTTPS :8443)
+  - url: /
+    description: Direct service execution (local development)
+
+paths:
+  /networks/check:
+    get:
+      summary: Check whether a BSSID (and optional SSID) belongs to a drone station
+      operationId: checkDroneNetwork
+      security:
+        - Bearer: []
+      parameters:
+        - name: bssid
+          in: query
+          required: true
+          description: >
+            Wireless station BSSID / MAC address in colon, hyphen, dot, or bare 12-hex format
+            (e.g., 60:60:1F:12:34:56, 60-60-1F-12-34-56, 6060.1F12.3456, 60601F123456).
+            All-zero and broadcast addresses are rejected.
+          schema:
+            type: string
+            minLength: 12
+            maxLength: 32
+            example: "60:60:1F:12:34:56"
+        - name: ssid
+          in: query
+          required: false
+          description: >
+            Optional observed Wi-Fi SSID (max 32 UTF-8 bytes, no control characters).
+            Improves model disambiguation and confirms shared Wi-Fi chipsets (e.g., Syma, MJX Bugs).
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 32
+            example: "Bugs_123456"
+      responses:
+        "200":
+          description: Deterministic network inspection result.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DroneNetworkCheckResponse"
+              examples:
+                dedicatedDji:
+                  summary: Confirmed DJI station via OUI
+                  value:
+                    isDroneStation: true
+                    verdict: Confirmed
+                    confidenceScore: 90
+                    matchSource: Oui
+                    normalizedBssid: "60:60:1F:12:34:56"
+                    ouiPrefix: "60:60:1F"
+                    matchedPrefix: "60:60:1F"
+                    isLocallyAdministered: false
+                    hardwareVendor: "SZ DJI Technology Co., Ltd."
+                    brandMark: "DJI"
+                    chipsetExclusivity: DedicatedDroneVendor
+                    stationRole: MultiRole
+                    candidateModels: ["Mavic Series", "Phantom Series", "Inspire Series", "Mini Series", "Air Series"]
+                    frequencyBands: ["2.4 GHz", "5.8 GHz"]
+                    frequencyRangesMhz: ["2400-2483.5 MHz", "5725-5850 MHz"]
+                    channelSummary: "2.4 GHz ISM (Ch 1-13) / 5.8 GHz ISM (Ch 149-165)"
+                    radioProtocols: ["Wi-Fi 802.11a/b/g/n/ac", "OcuSync", "Lightbridge"]
+                    signalRangeTier: ExtendedRangeDigital
+                    knownSsidPatterns: ["DJI-*", "Mavic-*", "Phantom*", "Inspire*", "Spark-*"]
+                    notes: ["Matched dedicated drone manufacturer IEEE OUI block."]
+                sharedChipsetWithSsid:
+                  summary: Confirmed Syma/MJX via shared chipset OUI + SSID
+                  value:
+                    isDroneStation: true
+                    verdict: Confirmed
+                    confidenceScore: 92
+                    matchSource: OuiAndSsid
+                    normalizedBssid: "20:F4:1B:AA:BB:CC"
+                    ouiPrefix: "20:F4:1B"
+                    matchedPrefix: "20:F4:1B"
+                    isLocallyAdministered: false
+                    observedSsid: "SYMA_FPV_8842"
+                    matchedSsidPattern: "SYMA_FPV_*"
+                    hardwareVendor: "Shenzhen Bilian Electronic Co., Ltd."
+                    brandMark: "Syma"
+                    chipsetExclusivity: SharedConsumerChipset
+                    stationRole: AircraftAp
+                    candidateModels: ["Syma X5SW / X5UW / X8W / X25W FPV Series"]
+                    frequencyBands: ["2.4 GHz"]
+                    frequencyRangesMhz: ["2400-2483.5 MHz"]
+                    channelSummary: "2.4 GHz ISM (Ch 1-13)"
+                    radioProtocols: ["Wi-Fi 802.11b/g/n"]
+                    signalRangeTier: ShortRangeWiFi
+                    knownSsidPatterns: ["SYMA_FPV_*", "Syma-*", "WiFi_UFO_*"]
+                    notes: ["Correlated shared white-label Wi-Fi chipset with Syma SSID pattern."]
+                sharedChipsetWithoutSsid:
+                  summary: Shared chipset without SSID (conservative non-confirmation)
+                  value:
+                    isDroneStation: false
+                    verdict: Possible
+                    confidenceScore: 30
+                    matchSource: Oui
+                    normalizedBssid: "24:0A:C4:11:22:33"
+                    ouiPrefix: "24:0A:C4"
+                    matchedPrefix: "24:0A:C4"
+                    isLocallyAdministered: false
+                    hardwareVendor: "Espressif Inc."
+                    brandMark: "Espressif (Shared Wi-Fi Chipset)"
+                    chipsetExclusivity: SharedConsumerChipset
+                    stationRole: Unknown
+                    candidateModels: ["DIY ESP32/ESP8266 Drone", "ExpressLRS Wi-Fi TX/RX", "Budget Wi-Fi Drone"]
+                    frequencyBands: ["2.4 GHz"]
+                    frequencyRangesMhz: ["2400-2483.5 MHz"]
+                    channelSummary: "2.4 GHz ISM (Ch 1-13)"
+                    radioProtocols: ["Wi-Fi 802.11b/g/n"]
+                    signalRangeTier: ShortRangeWiFi
+                    knownSsidPatterns: ["ExpressLRS TX*", "ExpressLRS RX*", "WIFI_UFO_*"]
+                    notes: ["Shared general-purpose Wi-Fi chipset also common in non-drone IoT devices; supply an SSID to confirm."]
+        "400":
+          description: Validation error (invalid BSSID, oversized/unsafe SSID, or unexpected query parameter).
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ValidationProblemDetails"
+        "401":
+          description: Missing, invalid, expired, or untrusted JWT bearer token.
+          headers:
+            WWW-Authenticate:
+              schema:
+                type: string
+                example: Bearer
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ProblemDetails"
+        "429":
+          description: Rate limit exceeded.
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ProblemDetails"
+        "500":
+          description: Unexpected server error (sanitized, no stack trace).
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ProblemDetails"
+
+  /health:
+    get:
+      summary: Service liveness and readiness probe
+      operationId: getHealth
+      security: []
+      responses:
+        "200":
+          description: Service and signature catalog initialized and ready.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [status]
+                properties:
+                  status:
+                    type: string
+                    example: Healthy
+
+components:
+  securitySchemes:
+    Bearer:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: >
+        Access token issued by Management POST /api/management/auth/login (HS512,
+        Issuer=DroneVision, Audience=DroneVision.Client, ClockSkew=0, requires sub/sid/jti claims).
+
+  schemas:
+    DroneNetworkCheckResponse:
+      type: object
+      required:
+        - isDroneStation
+        - verdict
+        - confidenceScore
+        - matchSource
+        - normalizedBssid
+        - ouiPrefix
+        - isLocallyAdministered
+        - stationRole
+        - candidateModels
+        - frequencyBands
+        - frequencyRangesMhz
+        - radioProtocols
+        - signalRangeTier
+        - knownSsidPatterns
+        - notes
+      properties:
+        isDroneStation:
+          type: boolean
+        verdict:
+          type: string
+          enum: [NotRecognized, Possible, Probable, Confirmed]
+        confidenceScore:
+          type: integer
+          minimum: 0
+          maximum: 100
+        matchSource:
+          type: string
+          enum: [None, Oui, Ssid, OuiAndSsid]
+        normalizedBssid:
+          type: string
+        ouiPrefix:
+          type: string
+        matchedPrefix:
+          type: string
+          nullable: true
+        isLocallyAdministered:
+          type: boolean
+        observedSsid:
+          type: string
+          nullable: true
+        matchedSsidPattern:
+          type: string
+          nullable: true
+        hardwareVendor:
+          type: string
+          nullable: true
+        brandMark:
+          type: string
+          nullable: true
+        chipsetExclusivity:
+          type: string
+          nullable: true
+          enum: [DedicatedDroneVendor, SharedConsumerChipset]
+        stationRole:
+          type: string
+          enum: [Unknown, AircraftAp, GroundController, FpvVtx, TelemetryModule, MultiRole]
+        candidateModels:
+          type: array
+          items:
+            type: string
+        frequencyBands:
+          type: array
+          items:
+            type: string
+        frequencyRangesMhz:
+          type: array
+          items:
+            type: string
+        channelSummary:
+          type: string
+          nullable: true
+        radioProtocols:
+          type: array
+          items:
+            type: string
+        signalRangeTier:
+          type: string
+          enum: [Unknown, ShortRangeWiFi, MediumRangeWiFi, ExtendedRangeDigital]
+        knownSsidPatterns:
+          type: array
+          items:
+            type: string
+        notes:
+          type: array
+          items:
+            type: string
+
+    ProblemDetails:
+      type: object
+      properties:
+        type:
+          type: string
+        title:
+          type: string
+        status:
+          type: integer
+        detail:
+          type: string
+        instance:
+          type: string
+        traceId:
+          type: string
+
+    ValidationProblemDetails:
+      allOf:
+        - $ref: "#/components/schemas/ProblemDetails"
+        - type: object
+          properties:
+            errors:
+              type: object
+              additionalProperties:
+                type: array
+                items:
+                  type: string

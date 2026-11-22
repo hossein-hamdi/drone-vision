@@ -1,6 +1,7 @@
 packages:
   - frontend
   - src/services/Management
+  - src/services/Checker
   - src/gateway
 
 allowBuilds:

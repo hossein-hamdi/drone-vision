@@ -1,0 +1,7 @@
+<Solution>
+  <Project Path="Checker.API/Checker.API.csproj" />
+  <Project Path="Checker.Application/Checker.Application.csproj" />
+  <Project Path="Checker.Domain/Checker.Domain.csproj" />
+  <Project Path="Checker.Infrastructure/Checker.Infrastructure.csproj" />
+  <Project Path="Checker.Tests/Checker.Tests.csproj" />
+</Solution>

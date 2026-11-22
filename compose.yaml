@@ -2,4 +2,5 @@ include:
   - ./frontend/compose.yaml
   - ./src/gateway/compose.yaml
   - ./src/services/Management/compose.yaml
+  - ./src/services/Checker/compose.yaml
   - ./src/deploy/sqlserver/compose.yaml

@@ -62,3 +62,21 @@ services:
             - Dockerfile
         - action: rebuild
           path: ./src/services/Management/Dockerfile
+  checker:
+    image: drone-analyze-checker:development
+    build:
+      target: development
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+    develop:
+      watch:
+        - action: sync
+          path: ./src/services/Checker
+          target: /src
+          initial_sync: true
+          ignore:
+            - '**/bin/'
+            - '**/obj/'
+            - Dockerfile
+        - action: rebuild
+          path: ./src/services/Checker/Dockerfile

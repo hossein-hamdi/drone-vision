@@ -1,0 +1,19 @@
+services:
+  checker:
+    image: drone-analyze-checker:production
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: runtime
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ASPNETCORE_URLS: http://+:8080
+      ASPNETCORE_FORWARDEDHEADERS_ENABLED: "true"
+      Gateway__PathBase: /api/checker
+      Management__BaseUrl: http://management:8080/api/management
+      Jwt__Issuer: ${JWT_ISSUER:-DroneVision}
+      Jwt__Audience: ${JWT_AUDIENCE:-DroneVision.Client}
+      Jwt__SigningKey: ${JWT_SIGNING_KEY:?Set JWT_SIGNING_KEY in .env}
+    expose:
+      - "8080"
+    restart: unless-stopped

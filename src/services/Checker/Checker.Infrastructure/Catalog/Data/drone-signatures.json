@@ -1,0 +1,555 @@
+{
+  "prefixEntries": [
+    {
+      "id": "dji-dedicated-oui",
+      "prefixes": [
+        "04:A8:5A",
+        "0C:9A:E6",
+        "34:D2:62",
+        "48:1C:B9",
+        "4C:43:F6",
+        "58:B8:58",
+        "60:60:1F",
+        "88:29:85",
+        "8C:58:23",
+        "E4:7A:2C"
+      ],
+      "vendorName": "SZ DJI Technology Co., Ltd.",
+      "brandMark": "DJI",
+      "exclusivity": "DedicatedDroneVendor",
+      "candidateModels": [
+        "Mavic Series (Mavic 2 / 3 / Pro / Enterprise)",
+        "Air Series (Mavic Air / Air 2 / 2S / 3)",
+        "Mini Series (Mini 2 / 3 / 4 Pro)",
+        "Phantom Series (Phantom 3 / 4)",
+        "Inspire Series (Inspire 1 / 2 / 3)",
+        "Matrice Series (M200 / M300 / M350 RTK)",
+        "Avata / DJI FPV / Spark",
+        "DJI Smart / RC / RC Pro Controllers"
+      ],
+      "stationRole": "MultiRole",
+      "frequencyProfile": {
+        "bands": ["Band24GHz", "Band5GHz", "Band58GHz"],
+        "frequencyRangesMhz": ["2400-2483.5 MHz", "5150-5250 MHz", "5725-5850 MHz"],
+        "channelSummary": "2.4 GHz ISM (Ch 1-13) / 5.2 & 5.8 GHz (OcuSync / Lightbridge / Wi-Fi)"
+      },
+      "radioProtocols": ["Wi-Fi 802.11a/b/g/n/ac", "DJI OcuSync (O2/O3/O4)", "DJI Lightbridge"],
+      "signalRangeTier": "ExtendedRangeDigital",
+      "associatedSsidPatterns": ["DJI-*", "Mavic-*", "Phantom*", "Inspire*", "Spark-*", "TELLO-*"],
+      "notes": "Verified SZ DJI Technology IEEE MA-L allocations covering aircraft Wi-Fi APs, controllers, and telemetry links."
+    },
+    {
+      "id": "parrot-dedicated-oui",
+      "prefixes": [
+        "00:12:1C",
+        "00:26:7E",
+        "90:03:B7",
+        "A0:14:3D"
+      ],
+      "vendorName": "Parrot SA",
+      "brandMark": "Parrot",
+      "exclusivity": "DedicatedDroneVendor",
+      "candidateModels": [
+        "Anafi / Anafi Thermal / Anafi USA / Anafi Ai",
+        "Bebop / Bebop 2 / Disco",
+        "AR.Drone / AR.Drone 2.0",
+        "Mambo / Swing / Rolling Spider",
+        "Parrot Skycontroller Series"
+      ],
+      "stationRole": "MultiRole",
+      "frequencyProfile": {
+        "bands": ["Band24GHz", "Band5GHz", "Band58GHz"],
+        "frequencyRangesMhz": ["2400-2483.5 MHz", "5150-5850 MHz"],
+        "channelSummary": "2.4 GHz ISM / 5 GHz UNII-1..3 dual-band Wi-Fi"
+      },
+      "radioProtocols": ["Wi-Fi 802.11a/b/g/n/ac", "BLE (Minidrones)"],
+      "signalRangeTier": "MediumRangeWiFi",
+      "associatedSsidPatterns": ["ANAFI-*", "BebopDrone-*", "Bebop2-*", "Parrot_*", "ardrone*"],
+      "notes": "Verified Parrot SA IEEE MA-L blocks; note Parrot also produced historical automotive Bluetooth kits under legacy prefixes."
+    },
+    {
+      "id": "skydio-dedicated-oui",
+      "prefixes": ["38:1D:14"],
+      "vendorName": "Skydio Inc.",
+      "brandMark": "Skydio",
+      "exclusivity": "DedicatedDroneVendor",
+      "candidateModels": ["Skydio 2", "Skydio 2+", "Skydio X2", "Skydio X10"],
+      "stationRole": "MultiRole",
+      "frequencyProfile": {
+        "bands": ["Band24GHz", "Band5GHz", "Band58GHz"],
+        "frequencyRangesMhz": ["2400-2483.5 MHz", "5150-5850 MHz"],
+        "channelSummary": "2.4 GHz & 5 GHz dual-band autonomous link"
+      },
+      "radioProtocols": ["Wi-Fi 802.11ac", "Skydio Proprietary 5 GHz RF"],
+      "signalRangeTier": "ExtendedRangeDigital",
+      "associatedSsidPatterns": ["Skydio-*", "Skydio2-*"],
+      "notes": "Verified Skydio Inc. IEEE MA-L OUI block."
+    },
+    {
+      "id": "autel-mam-28bit",
+      "prefixes": ["EC:5B:CD:E"],
+      "vendorName": "Autel Robotics USA LLC",
+      "brandMark": "Autel Robotics",
+      "exclusivity": "DedicatedDroneVendor",
+      "candidateModels": [
+        "Autel EVO / EVO II / EVO II Pro",
+        "Autel EVO Nano / EVO Lite Series",
+        "Autel EVO Max / Dragonfish",
+        "Autel Smart Controller"
+      ],
+      "stationRole": "MultiRole",
+      "frequencyProfile": {
+        "bands": ["Band24GHz", "Band58GHz", "Band900MHz"],
+        "frequencyRangesMhz": ["902-928 MHz", "2400-2483.5 MHz", "5725-5850 MHz"],
+        "channelSummary": "2.4 GHz / 5.8 GHz (plus regional 900 MHz SkyLink)"
+      },
+      "radioProtocols": ["Wi-Fi 802.11n/ac", "Autel SkyLink"],
+      "signalRangeTier": "ExtendedRangeDigital",
+      "associatedSsidPatterns": ["Autel_EVO-*", "Autel-*", "EVO-*"],
+      "notes": "Verified IEEE 28-bit MA-M block EC:5B:CD:E0:00:00 - EC:5B:CD:EF:FF:FF."
+    },
+    {
+      "id": "hubsan-mam-28bit",
+      "prefixes": ["98:AA:FC:7"],
+      "vendorName": "Shenzhen Hubsan Technology Co., Ltd.",
+      "brandMark": "Hubsan",
+      "exclusivity": "DedicatedDroneVendor",
+      "candidateModels": [
+        "Hubsan Zino / Zino Pro / Zino 2 / Zino Mini",
+        "Hubsan Ace Pro / BlackHawk",
+        "Hubsan X4 H501A / H507A / H109S"
+      ],
+      "stationRole": "AircraftAp",
+      "frequencyProfile": {
+        "bands": ["Band24GHz", "Band58GHz"],
+        "frequencyRangesMhz": ["2400-2483.5 MHz", "5725-5850 MHz"],
+        "channelSummary": "2.4 GHz control / 5.8 GHz FPV & SyncLeas digital link"
+      },
+      "radioProtocols": ["Wi-Fi 802.11n/ac", "Hubsan SyncLeas"],
+      "signalRangeTier": "MediumRangeWiFi",
+      "associatedSsidPatterns": ["Hubsan-*", "Zino-*", "H501*"],
+      "notes": "Verified IEEE 28-bit MA-M block 98:AA:FC:70:00:00 - 98:AA:FC:7F:FF:FF."
+    },
+    {
+      "id": "yuneec-mam-28bit",
+      "prefixes": ["E0:B6:F5:8"],
+      "vendorName": "Yuneec International (China) Co., Ltd.",
+      "brandMark": "Yuneec",
+      "exclusivity": "DedicatedDroneVendor",
+      "candidateModels": [
+        "Yuneec Typhoon H / H Plus / Q500 4K",
+        "Yuneec Mantis Q / Mantis G",
+        "Yuneec Breeze 4K",
+        "Yuneec H520 / H850 Enterprise",
+        "ST10 / ST16 Ground Station"
+      ],
+      "stationRole": "MultiRole",
+      "frequencyProfile": {
+        "bands": ["Band24GHz", "Band58GHz"],
+        "frequencyRangesMhz": ["2400-2483.5 MHz", "5725-5850 MHz"],
+        "channelSummary": "2.4 GHz telemetry/control + 5.8 GHz Wi-Fi video downlink"
+      },
+      "radioProtocols": ["Wi-Fi 802.11a/n/ac"],
+      "signalRangeTier": "MediumRangeWiFi",
+      "associatedSsidPatterns": ["Yuneec_*", "Typhoon-*", "Breeze-*", "H520-*", "ST16-*"],
+      "notes": "Verified IEEE 28-bit MA-M block E0:B6:F5:80:00:00 - E0:B6:F5:8F:FF:FF."
+    },
+    {
+      "id": "shenzhen-bilian-shared",
+      "prefixes": ["20:F4:1B"],
+      "vendorName": "Shenzhen Bilian Electronic Co., Ltd.",
+      "brandMark": "Shenzhen Bilian (Shared Wi-Fi Chipset)",
+      "exclusivity": "SharedConsumerChipset",
+      "candidateModels": [
+        "Syma FPV Wi-Fi Series (X5SW / X5UW / X8W / X25W)",
+        "MJX / Bugs Wi-Fi FPV Series",
+        "JJRC / Eachine / Holy Stone Budget Wi-Fi Drones"
+      ],
+      "stationRole": "AircraftAp",
+      "frequencyProfile": {
+        "bands": ["Band24GHz", "Band58GHz"],
+        "frequencyRangesMhz": ["2400-2483.5 MHz", "5725-5850 MHz"],
+        "channelSummary": "2.4 GHz ISM (Ch 1-13) / select 5 GHz FPV modules"
+      },
+      "radioProtocols": ["Wi-Fi 802.11b/g/n"],
+      "signalRangeTier": "ShortRangeWiFi",
+      "associatedSsidPatterns": ["SYMA_FPV_*", "WiFi_UFO_*", "Bugs_*", "MJX_*", "JJRC_*", "Eachine_*"],
+      "notes": "White-label Wi-Fi module OEM frequently embedded in budget drones and consumer cameras; supply an SSID to confirm."
+    },
+    {
+      "id": "espressif-shared",
+      "prefixes": [
+        "24:0A:C4",
+        "30:AE:A4",
+        "84:CC:A8",
+        "A4:CF:12",
+        "C4:4F:33",
+        "EC:FA:BC"
+      ],
+      "vendorName": "Espressif Inc.",
+      "brandMark": "Espressif (Shared Wi-Fi Chipset)",
+      "exclusivity": "SharedConsumerChipset",
+      "candidateModels": [
+        "ExpressLRS Wi-Fi TX/RX Modules",
+        "DIY ESP32/ESP8266 Micro-Drones",
+        "Budget Wi-Fi FPV Toy Drones (MJX / Syma / Cheerson)"
+      ],
+      "stationRole": "TelemetryModule",
+      "frequencyProfile": {
+        "bands": ["Band24GHz"],
+        "frequencyRangesMhz": ["2400-2483.5 MHz"],
+        "channelSummary": "2.4 GHz ISM (Ch 1-13)"
+      },
+      "radioProtocols": ["Wi-Fi 802.11b/g/n"],
+      "signalRangeTier": "ShortRangeWiFi",
+      "associatedSsidPatterns": ["ExpressLRS TX*", "ExpressLRS RX*", "Bugs_*", "SYMA_*", "WiFi_UFO_*"],
+      "notes": "Common ESP8266/ESP32 Wi-Fi SoC used across IoT devices, DIY drones, and ExpressLRS Wi-Fi interfaces."
+    },
+    {
+      "id": "realtek-shared",
+      "prefixes": ["00:E0:4C"],
+      "vendorName": "Realtek Semiconductor Corp.",
+      "brandMark": "Realtek (Shared Wi-Fi Chipset)",
+      "exclusivity": "SharedConsumerChipset",
+      "candidateModels": [
+        "Ryze Tello / Budget 2.4/5 GHz Wi-Fi Drones",
+        "Holy Stone / Potensic / MJX Wi-Fi FPV Series"
+      ],
+      "stationRole": "AircraftAp",
+      "frequencyProfile": {
+        "bands": ["Band24GHz", "Band5GHz"],
+        "frequencyRangesMhz": ["2400-2483.5 MHz", "5150-5850 MHz"],
+        "channelSummary": "2.4 GHz / 5 GHz consumer Wi-Fi"
+      },
+      "radioProtocols": ["Wi-Fi 802.11b/g/n/ac"],
+      "signalRangeTier": "ShortRangeWiFi",
+      "associatedSsidPatterns": ["TELLO-*", "HolyStone-*", "Potensic-*", "Bugs_*"],
+      "notes": "General-purpose Wi-Fi chipset widely used in PCs, routers, and Wi-Fi camera drones; requires SSID correlation."
+    }
+  ],
+  "ssidRules": [
+    {
+      "id": "dji-tello",
+      "brandMark": "Ryze / DJI",
+      "pattern": "^(TELLO|RMTT)[-_][0-9A-Fa-f]{6}$",
+      "displayPattern": "TELLO-xxxxxx / RMTT-xxxxxx",
+      "candidateModels": ["Ryze Tello", "Tello EDU", "RoboMaster TT"],
+      "stationRole": "AircraftAp",
+      "frequencyProfile": {
+        "bands": ["Band24GHz"],
+        "frequencyRangesMhz": ["2400-2483.5 MHz"],
+        "channelSummary": "2.4 GHz ISM (Ch 1-11)"
+      },
+      "radioProtocols": ["Wi-Fi 802.11n"],
+      "signalRangeTier": "ShortRangeWiFi",
+      "confidenceWeight": 92,
+      "associatedChipsetVendors": ["DJI", "Realtek", "Intel"],
+      "notes": "Default Ryze Tello / RoboMaster TT aircraft Wi-Fi AP pattern."
+    },
+    {
+      "id": "dji-aircraft",
+      "brandMark": "DJI",
+      "pattern": "^(DJI[-_ ](?:Mini|Air|Mavic|Phantom|Inspire|Matrice|Avata|FPV|Spark)|Mavic(?:Pro|Air|Mini|2|3)?[-_][0-9A-Za-z_-]+|Phantom[234]?[-_][0-9A-Za-z_-]+|Inspire[123]?[-_][0-9A-Za-z_-]+|Spark[-_][0-9A-Za-z_-]{4,}|Matrice[-_][0-9A-Za-z_-]+|Avata[-_][0-9A-Za-z_-]+)",
+      "displayPattern": "DJI-* / Mavic-* / Phantom* / Inspire* / Spark-*",
+      "candidateModels": ["Mavic Series", "Air Series", "Mini Series", "Phantom Series", "Inspire Series", "Matrice Series", "Spark", "Avata"],
+      "stationRole": "AircraftAp",
+      "frequencyProfile": {
+        "bands": ["Band24GHz", "Band58GHz"],
+        "frequencyRangesMhz": ["2400-2483.5 MHz", "5725-5850 MHz"],
+        "channelSummary": "2.4 GHz ISM / 5.8 GHz dual-band"
+      },
+      "radioProtocols": ["Wi-Fi 802.11a/b/g/n/ac", "OcuSync"],
+      "signalRangeTier": "ExtendedRangeDigital",
+      "confidenceWeight": 90,
+      "associatedChipsetVendors": ["DJI"]
+    },
+    {
+      "id": "syma-fpv",
+      "brandMark": "Syma",
+      "pattern": "^SYMA[-_]?(?:FPV|HD|X[0-9]{1,3}[A-Za-z]?)?[-_]?[0-9A-Za-z_-]+$",
+      "displayPattern": "SYMA_FPV_* / Syma-*",
+      "candidateModels": ["Syma X5SW / X5UW / X5HW", "Syma X8W / X8HW / X8Pro", "Syma X25W / X26 / Z3 / W1Pro"],
+      "stationRole": "AircraftAp",
+      "frequencyProfile": {
+        "bands": ["Band24GHz", "Band5GHz"],
+        "frequencyRangesMhz": ["2400-2483.5 MHz", "5150-5850 MHz"],
+        "channelSummary": "2.4 GHz ISM (standard FPV) / 5 GHz on W1Pro/W3 models"
+      },
+      "radioProtocols": ["Wi-Fi 802.11b/g/n/ac"],
+      "signalRangeTier": "ShortRangeWiFi",
+      "confidenceWeight": 88,
+      "associatedChipsetVendors": ["Shenzhen Bilian", "Espressif", "Realtek"]
+    },
+    {
+      "id": "mjx-bugs",
+      "brandMark": "MJX",
+      "pattern": "^(?:Bugs[-_]?[0-9A-Za-z_-]+|MJX[-_][0-9A-Za-z_-]+|B(?:2|3|4|5|6|7|8|12|16|18|19|20)[WE]?[-_][0-9A-Fa-f]{4,})$",
+      "displayPattern": "Bugs_* / MJX_* / B2W/B5W/B20_*",
+      "candidateModels": ["MJX Bugs 2 (B2W/B2SE)", "MJX Bugs 4W / 5W / 7", "MJX Bugs 12 EIS / 16 Pro / 19 / 20 EIS"],
+      "stationRole": "AircraftAp",
+      "frequencyProfile": {
+        "bands": ["Band24GHz", "Band5GHz", "Band58GHz"],
+        "frequencyRangesMhz": ["2400-2483.5 MHz", "5150-5850 MHz"],
+        "channelSummary": "2.4 GHz (legacy B2W) / 5 GHz Wi-Fi FPV (B4W/B5W/B12/B16/B20)"
+      },
+      "radioProtocols": ["Wi-Fi 802.11n/ac"],
+      "signalRangeTier": "MediumRangeWiFi",
+      "confidenceWeight": 88,
+      "associatedChipsetVendors": ["Shenzhen Bilian", "Espressif", "Realtek"]
+    },
+    {
+      "id": "wifi-ufo-generic-fpv",
+      "brandMark": "Syma / Eachine / JJRC (White-Label Wi-Fi FPV)",
+      "pattern": "^(?:WiFi[-_]?UFO|FPV[-_]?WIFI)[-_][0-9A-Za-z_-]+$",
+      "displayPattern": "WiFi_UFO_* / FPV_WIFI_*",
+      "candidateModels": ["White-Label Budget Wi-Fi FPV Drones (Syma / Eachine / JJRC / Generic)"],
+      "stationRole": "AircraftAp",
+      "frequencyProfile": {
+        "bands": ["Band24GHz"],
+        "frequencyRangesMhz": ["2400-2483.5 MHz"],
+        "channelSummary": "2.4 GHz ISM (Ch 1-13)"
+      },
+      "radioProtocols": ["Wi-Fi 802.11b/g/n"],
+      "signalRangeTier": "ShortRangeWiFi",
+      "confidenceWeight": 80,
+      "associatedChipsetVendors": ["Shenzhen Bilian", "Espressif"],
+      "notes": "Shared mobile FPV app SSID format used across budget Chinese toy quadcopters."
+    },
+    {
+      "id": "parrot-anafi-bebop",
+      "brandMark": "Parrot",
+      "pattern": "^(?:ANAFI[-_][0-9A-Za-z_-]+|Bebop(?:Drone|2)[-_][0-9A-Za-z_-]+|Parrot[-_][0-9A-Za-z_-]+|ardrone[0-9]?[-_][0-9A-Za-z_-]+|Skycontroller[-_]?[0-9A-Za-z_-]*)$",
+      "displayPattern": "ANAFI-* / BebopDrone-* / Parrot_* / ardrone*",
+      "candidateModels": ["Parrot Anafi / Anafi USA", "Parrot Bebop / Bebop 2", "Parrot AR.Drone", "Skycontroller"],
+      "stationRole": "MultiRole",
+      "frequencyProfile": {
+        "bands": ["Band24GHz", "Band5GHz", "Band58GHz"],
+        "frequencyRangesMhz": ["2400-2483.5 MHz", "5150-5850 MHz"],
+        "channelSummary": "2.4 GHz / 5 GHz dual-band Wi-Fi"
+      },
+      "radioProtocols": ["Wi-Fi 802.11a/b/g/n/ac"],
+      "signalRangeTier": "MediumRangeWiFi",
+      "confidenceWeight": 92,
+      "associatedChipsetVendors": ["Parrot"]
+    },
+    {
+      "id": "autel-evo",
+      "brandMark": "Autel Robotics",
+      "pattern": "^(?:Autel[-_]?(?:EVO|Nano|Lite|Dragonfish)?[-_][0-9A-Za-z_-]+|EVO[-_]?(?:II|Nano|Lite|Max)?[-_][0-9A-Za-z_-]{4,})$",
+      "displayPattern": "Autel-* / Autel_EVO-* / EVO-*",
+      "candidateModels": ["Autel EVO / EVO II", "EVO Nano / EVO Lite", "EVO Max / Dragonfish"],
+      "stationRole": "MultiRole",
+      "frequencyProfile": {
+        "bands": ["Band24GHz", "Band58GHz", "Band900MHz"],
+        "frequencyRangesMhz": ["902-928 MHz", "2400-2483.5 MHz", "5725-5850 MHz"],
+        "channelSummary": "2.4 GHz / 5.8 GHz (plus regional 900 MHz SkyLink)"
+      },
+      "radioProtocols": ["Wi-Fi 802.11n/ac", "Autel SkyLink"],
+      "signalRangeTier": "ExtendedRangeDigital",
+      "confidenceWeight": 90,
+      "associatedChipsetVendors": ["Autel"]
+    },
+    {
+      "id": "hubsan-zino",
+      "brandMark": "Hubsan",
+      "pattern": "^(?:Hubsan[-_][0-9A-Za-z_-]+|Zino[-_]?[0-9A-Za-z_-]+|H501[AS][-_][0-9A-Za-z_-]+)$",
+      "displayPattern": "Hubsan-* / Zino-* / H501*",
+      "candidateModels": ["Hubsan Zino / Zino Pro / Zino Mini", "Hubsan H501A / H507A"],
+      "stationRole": "AircraftAp",
+      "frequencyProfile": {
+        "bands": ["Band24GHz", "Band58GHz"],
+        "frequencyRangesMhz": ["2400-2483.5 MHz", "5725-5850 MHz"],
+        "channelSummary": "2.4 GHz / 5.8 GHz FPV & SyncLeas"
+      },
+      "radioProtocols": ["Wi-Fi 802.11n/ac", "Hubsan SyncLeas"],
+      "signalRangeTier": "MediumRangeWiFi",
+      "confidenceWeight": 88,
+      "associatedChipsetVendors": ["Hubsan"]
+    },
+    {
+      "id": "yuneec-typhoon",
+      "brandMark": "Yuneec",
+      "pattern": "^(?:Yuneec[-_][0-9A-Za-z_-]+|Typhoon[-_][0-9A-Za-z_-]+|Breeze[-_][0-9A-Za-z_-]+|H520[-_][0-9A-Za-z_-]+|ST1[06][-_][0-9A-Za-z_-]+)$",
+      "displayPattern": "Yuneec_* / Typhoon-* / Breeze-* / H520-*",
+      "candidateModels": ["Yuneec Typhoon H / Q500", "Yuneec Breeze 4K", "Yuneec H520 / ST16"],
+      "stationRole": "MultiRole",
+      "frequencyProfile": {
+        "bands": ["Band24GHz", "Band58GHz"],
+        "frequencyRangesMhz": ["2400-2483.5 MHz", "5725-5850 MHz"],
+        "channelSummary": "5.8 GHz video link + 2.4 GHz control"
+      },
+      "radioProtocols": ["Wi-Fi 802.11a/n/ac"],
+      "signalRangeTier": "MediumRangeWiFi",
+      "confidenceWeight": 88,
+      "associatedChipsetVendors": ["Yuneec"]
+    },
+    {
+      "id": "skydio-ssid",
+      "brandMark": "Skydio",
+      "pattern": "^Skydio(?:2|2\\+|X2|X10)?[-_][0-9A-Za-z_-]+$",
+      "displayPattern": "Skydio-* / Skydio2-*",
+      "candidateModels": ["Skydio 2", "Skydio 2+", "Skydio X2", "Skydio X10"],
+      "stationRole": "AircraftAp",
+      "frequencyProfile": {
+        "bands": ["Band24GHz", "Band5GHz", "Band58GHz"],
+        "frequencyRangesMhz": ["2400-2483.5 MHz", "5150-5850 MHz"],
+        "channelSummary": "2.4 GHz & 5 GHz autonomous wireless link"
+      },
+      "radioProtocols": ["Wi-Fi 802.11ac"],
+      "signalRangeTier": "ExtendedRangeDigital",
+      "confidenceWeight": 92,
+      "associatedChipsetVendors": ["Skydio"]
+    },
+    {
+      "id": "holy-stone",
+      "brandMark": "Holy Stone",
+      "pattern": "^(?:HolyStone[-_][0-9A-Za-z_-]+|HS(?:110|165|175|360|440|510|600|700|720)[A-Za-z]?[-_][0-9A-Za-z_-]+)$",
+      "displayPattern": "HolyStone-* / HS720-* / HS110D-*",
+      "candidateModels": ["Holy Stone HS720 / HS720E / HS720G", "Holy Stone HS110D / HS175D / HS360S / HS440"],
+      "stationRole": "AircraftAp",
+      "frequencyProfile": {
+        "bands": ["Band24GHz", "Band5GHz"],
+        "frequencyRangesMhz": ["2400-2483.5 MHz", "5150-5850 MHz"],
+        "channelSummary": "2.4 GHz (entry models) / 5 GHz Wi-Fi FPV (GPS models)"
+      },
+      "radioProtocols": ["Wi-Fi 802.11n/ac"],
+      "signalRangeTier": "ShortRangeWiFi",
+      "confidenceWeight": 88,
+      "associatedChipsetVendors": ["Shenzhen Bilian", "Realtek", "Espressif"]
+    },
+    {
+      "id": "potensic-atom-dreamer",
+      "brandMark": "Potensic",
+      "pattern": "^(?:Potensic[-_][0-9A-Za-z_-]+|Dreamer[-_][0-9A-Za-z_-]+|Atom[-_]?SE[-_][0-9A-Za-z_-]+)$",
+      "displayPattern": "Potensic-* / Dreamer-* / Atom_SE-*",
+      "candidateModels": ["Potensic Atom / Atom SE", "Potensic Dreamer Pro", "Potensic T25 / D88"],
+      "stationRole": "AircraftAp",
+      "frequencyProfile": {
+        "bands": ["Band24GHz", "Band5GHz"],
+        "frequencyRangesMhz": ["2400-2483.5 MHz", "5150-5850 MHz"],
+        "channelSummary": "2.4 GHz / 5 GHz Wi-Fi & PixSync"
+      },
+      "radioProtocols": ["Wi-Fi 802.11n/ac", "PixSync"],
+      "signalRangeTier": "MediumRangeWiFi",
+      "confidenceWeight": 88,
+      "associatedChipsetVendors": ["Realtek", "Shenzhen Bilian"]
+    },
+    {
+      "id": "eachine-fpv",
+      "brandMark": "Eachine",
+      "pattern": "^(?:Eachine[-_][0-9A-Za-z_-]+|EFPV[-_][0-9A-Za-z_-]+)$",
+      "displayPattern": "Eachine_* / EFPV_*",
+      "candidateModels": ["Eachine E58 / E520S / EX4 / EX5"],
+      "stationRole": "AircraftAp",
+      "frequencyProfile": {
+        "bands": ["Band24GHz", "Band5GHz"],
+        "frequencyRangesMhz": ["2400-2483.5 MHz", "5150-5850 MHz"],
+        "channelSummary": "2.4 GHz / 5 GHz Wi-Fi FPV"
+      },
+      "radioProtocols": ["Wi-Fi 802.11b/g/n/ac"],
+      "signalRangeTier": "ShortRangeWiFi",
+      "confidenceWeight": 86,
+      "associatedChipsetVendors": ["Shenzhen Bilian", "Realtek"]
+    },
+    {
+      "id": "jjrc-drones",
+      "brandMark": "JJRC",
+      "pattern": "^(?:JJRC|JJPRO)[-_][0-9A-Za-z_-]+$",
+      "displayPattern": "JJRC_* / JJPRO_*",
+      "candidateModels": ["JJRC H37 / H47 / H68 / X12 / X17"],
+      "stationRole": "AircraftAp",
+      "frequencyProfile": {
+        "bands": ["Band24GHz", "Band5GHz"],
+        "frequencyRangesMhz": ["2400-2483.5 MHz", "5150-5850 MHz"],
+        "channelSummary": "2.4 GHz / 5 GHz Wi-Fi FPV"
+      },
+      "radioProtocols": ["Wi-Fi 802.11b/g/n/ac"],
+      "signalRangeTier": "ShortRangeWiFi",
+      "confidenceWeight": 86,
+      "associatedChipsetVendors": ["Shenzhen Bilian", "Espressif"]
+    },
+    {
+      "id": "cheerson-cx",
+      "brandMark": "Cheerson",
+      "pattern": "^(?:Cheerson[-_][0-9A-Za-z_-]+|CX[-_]?(?:10W|20|30W|32W|35|40)[-_][0-9A-Za-z_-]+)$",
+      "displayPattern": "Cheerson_* / CX-10W_* / CX-30W_*",
+      "candidateModels": ["Cheerson CX-10W / CX-30W / CX-32W"],
+      "stationRole": "AircraftAp",
+      "frequencyProfile": {
+        "bands": ["Band24GHz"],
+        "frequencyRangesMhz": ["2400-2483.5 MHz"],
+        "channelSummary": "2.4 GHz ISM"
+      },
+      "radioProtocols": ["Wi-Fi 802.11b/g/n"],
+      "signalRangeTier": "ShortRangeWiFi",
+      "confidenceWeight": 85,
+      "associatedChipsetVendors": ["Espressif", "Shenzhen Bilian"]
+    },
+    {
+      "id": "walkera-vitus",
+      "brandMark": "Walkera",
+      "pattern": "^(?:Walkera[-_][0-9A-Za-z_-]+|WK[-_]?(?:Vitus|F210|Rodeo|Voyager)[-_][0-9A-Za-z_-]+)$",
+      "displayPattern": "Walkera_* / WK_Vitus_*",
+      "candidateModels": ["Walkera Vitus 320", "Walkera Voyager", "Walkera F210 / Rodeo"],
+      "stationRole": "AircraftAp",
+      "frequencyProfile": {
+        "bands": ["Band24GHz", "Band58GHz"],
+        "frequencyRangesMhz": ["2400-2483.5 MHz", "5725-5850 MHz"],
+        "channelSummary": "2.4 GHz / 5.8 GHz telemetry & video"
+      },
+      "radioProtocols": ["Wi-Fi 802.11n/ac"],
+      "signalRangeTier": "MediumRangeWiFi",
+      "confidenceWeight": 86
+    },
+    {
+      "id": "3dr-solo",
+      "brandMark": "3DR",
+      "pattern": "^(?:SoloLink[-_][0-9A-Za-z_-]+|3DR[-_][0-9A-Za-z_-]+)$",
+      "displayPattern": "SoloLink_* / 3DR_*",
+      "candidateModels": ["3DR Solo", "3DR Iris+ / Pixhawk Companion"],
+      "stationRole": "MultiRole",
+      "frequencyProfile": {
+        "bands": ["Band24GHz", "Band900MHz", "Band433MHz"],
+        "frequencyRangesMhz": ["433.05-434.79 MHz", "902-928 MHz", "2400-2483.5 MHz"],
+        "channelSummary": "2.4 GHz SoloLink Wi-Fi + 915/433 MHz MAVLink telemetry"
+      },
+      "radioProtocols": ["Wi-Fi 802.11n", "MAVLink"],
+      "signalRangeTier": "MediumRangeWiFi",
+      "confidenceWeight": 88
+    },
+    {
+      "id": "hoverair-zerozero",
+      "brandMark": "HoverAir / Zero Zero Robotics",
+      "pattern": "^(?:Hover(?:Air)?[-_][0-9A-Za-z_-]+|ZeroZero[-_][0-9A-Za-z_-]+)$",
+      "displayPattern": "HoverAir-* / Hover-* / ZeroZero-*",
+      "candidateModels": ["HoverAir X1", "HoverAir X1 Pro / ProMax", "Hover Camera Passport"],
+      "stationRole": "AircraftAp",
+      "frequencyProfile": {
+        "bands": ["Band24GHz", "Band5GHz"],
+        "frequencyRangesMhz": ["2400-2483.5 MHz", "5150-5850 MHz"],
+        "channelSummary": "2.4 GHz / 5 GHz direct Wi-Fi"
+      },
+      "radioProtocols": ["Wi-Fi 802.11n/ac"],
+      "signalRangeTier": "ShortRangeWiFi",
+      "confidenceWeight": 86
+    },
+    {
+      "id": "expresslrs-fpv-link",
+      "brandMark": "ExpressLRS / Open-Source FPV",
+      "pattern": "^(?:ExpressLRS[-_ ](?:TX|RX)(?:[-_ ][0-9A-Za-z_-]+)?|ELRS[-_ ](?:TX|RX)|OpenHD[-_]?[0-9A-Za-z_-]*|ArduPilot[-_]?[0-9A-Za-z_-]*)$",
+      "displayPattern": "ExpressLRS TX/RX / OpenHD* / ArduPilot*",
+      "candidateModels": ["ExpressLRS (BetaFPV / RadioMaster / Happymodel) TX/RX", "OpenHD Digital FPV", "ArduPilot Companion Wi-Fi"],
+      "stationRole": "TelemetryModule",
+      "frequencyProfile": {
+        "bands": ["Band24GHz", "Band900MHz", "Band58GHz"],
+        "frequencyRangesMhz": ["863-928 MHz", "2400-2483.5 MHz", "5725-5850 MHz"],
+        "channelSummary": "2.4 GHz Wi-Fi config AP (RC/telemetry links operate on 2.4 GHz or 900 MHz)"
+      },
+      "radioProtocols": ["Wi-Fi 802.11b/g/n (Config AP)", "ExpressLRS LoRa/FLRC"],
+      "signalRangeTier": "ExtendedRangeDigital",
+      "confidenceWeight": 88,
+      "associatedChipsetVendors": ["Espressif"],
+      "notes": "ExpressLRS transmitters and receivers expose an ESP8266/ESP32 Wi-Fi AP for configuration and firmware updates."
+    }
+  ]
+}
