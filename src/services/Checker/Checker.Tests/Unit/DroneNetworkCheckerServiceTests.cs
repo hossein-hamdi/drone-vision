@@ -181,6 +181,25 @@ public sealed class DroneNetworkCheckerServiceTests
         Assert.Equal(4, withPossible.DroneCount);
     }
 
+    [Fact]
+    public async Task ScanDroneNetworksAsync_ShouldIncludeMjxBugs16ProDrone4GSsidEvenWithUnknownOrLaaBssid()
+    {
+        var fakeScanner = new StubWiFiScanner(
+        [
+            new ScannedWiFiNetwork("1a:6d:cb:56:a8:65", "HomeWiFi-5G", 95, -52, "5 GHz", 5180, 36, "802.11ac", "WPA2-Personal"),
+            new ScannedWiFiNetwork("02:11:22:33:44:55", "Drone4G-300a400", 88, -56, "5.8 GHz", 5745, 149, "802.11ac", "Open")
+        ]);
+
+        var sut = CreateService(fakeScanner);
+        var result = await sut.ScanDroneNetworksAsync(includePossible: false);
+
+        Assert.Equal(2, result.TotalNetworksScanned);
+        var drone = Assert.Single(result.Drones);
+        Assert.Equal("Drone4G-300a400", drone.Ssid);
+        Assert.Equal("MJX", drone.BrandMark);
+        Assert.True(drone.IsDroneStation);
+    }
+
     private sealed class StubWiFiScanner(IReadOnlyList<ScannedWiFiNetwork> networks) : IWiFiScanner
     {
         public Task<IReadOnlyList<ScannedWiFiNetwork>> ScanAsync(CancellationToken ct = default) =>
