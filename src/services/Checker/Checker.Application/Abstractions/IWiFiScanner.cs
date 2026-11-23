@@ -4,5 +4,6 @@ namespace Checker.Application.Abstractions;
 
 public interface IWiFiScanner
 {
-    Task<IReadOnlyList<ScannedWiFiNetwork>> ScanAsync(CancellationToken ct = default);
+    Task<WlanInterfaceDiscoveryResult> DiscoverInterfacesAsync(CancellationToken ct = default);
+    Task<WiFiScanBatch> ScanAsync(CancellationToken ct = default);
 }

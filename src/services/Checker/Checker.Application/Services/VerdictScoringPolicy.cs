@@ -8,7 +8,7 @@ namespace Checker.Application.Services;
 
 public sealed class VerdictScoringPolicy
 {
-    public DroneNetworkCheckResponse EvaluateVerdict(
+    public DroneNetworkEvaluation EvaluateVerdict(
         MacAddress mac,
         SsidName? ssid,
         NetworkEvidenceResult evidence)
@@ -189,7 +189,7 @@ public sealed class VerdictScoringPolicy
             notes: notes);
     }
 
-    private static DroneNetworkCheckResponse BuildLaaResponse(
+    private static DroneNetworkEvaluation BuildLaaResponse(
         MacAddress mac,
         SsidName? ssid,
         string? matchedPrefixFormatted,
@@ -247,7 +247,7 @@ public sealed class VerdictScoringPolicy
             notes: notes);
     }
 
-    private static DroneNetworkCheckResponse CreateResponse(
+    private static DroneNetworkEvaluation CreateResponse(
         bool isDroneStation,
         DetectionVerdict verdict,
         int confidenceScore,

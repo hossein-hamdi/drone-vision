@@ -1,0 +1,18 @@
+# Optional Docker Compose override for Linux hosts with physical WLAN adapters.
+# Keep default compose.yaml on Docker bridge networking for Windows Docker safety
+# and Ocelot Gateway DNS resolution (http://checker:8080).
+#
+# Option A (Recommended when host runs NetworkManager — keeps bridge DNS intact):
+#   docker compose -f compose.yaml -f compose.linux-wifi.yaml up -d
+#
+# Option B (For Linux hosts without NetworkManager using direct kernel nl80211 `iw`):
+#   Switch checker to `network_mode: host` + `cap_add: [NET_ADMIN, NET_RAW]` and
+#   update the Gateway downstream host to reach localhost/host.docker.internal:8080.
+
+services:
+  checker:
+    cap_add:
+      - NET_ADMIN
+      - NET_RAW
+    volumes:
+      - /run/dbus/system_bus_socket:/run/dbus/system_bus_socket

@@ -43,6 +43,40 @@ public static class WiFiChannelConverter
     public static int SignalPercentToApproxRssiDbm(int signalPercent) =>
         Math.Clamp(signalPercent, 0, 100) / 2 - 100;
 
+    /// <summary>
+    /// Approximates a 0..100 signal percentage from an RSSI measurement in dBm.
+    /// </summary>
+    public static int RssiDbmToApproxSignalPercent(int rssiDbm) =>
+        Math.Clamp(2 * (rssiDbm + 100), 0, 100);
+
+    /// <summary>
+    /// Derives an IEEE 802.11 channel number from a center frequency in MHz when explicit channel metadata is absent.
+    /// </summary>
+    public static int? FrequencyMhzToChannel(int freqMhz)
+    {
+        if (freqMhz == 2484)
+        {
+            return 14;
+        }
+
+        if (freqMhz is >= 2412 and <= 2472 && (freqMhz - 2407) % 5 == 0)
+        {
+            return (freqMhz - 2407) / 5;
+        }
+
+        if (freqMhz is >= 5160 and <= 5885 && (freqMhz - 5000) % 5 == 0)
+        {
+            return (freqMhz - 5000) / 5;
+        }
+
+        if (freqMhz is >= 5955 and <= 7115 && (freqMhz - 5950) % 5 == 0)
+        {
+            return (freqMhz - 5950) / 5;
+        }
+
+        return null;
+    }
+
     private static string ResolveBandFromFrequency(int freqMhz, string? rawBand) => freqMhz switch
     {
         >= 2400 and <= 2499 => "2.4 GHz",

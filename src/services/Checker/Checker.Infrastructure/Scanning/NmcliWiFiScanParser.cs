@@ -6,13 +6,14 @@ namespace Checker.Infrastructure.Scanning;
 
 public static class NmcliWiFiScanParser
 {
-    public static IReadOnlyList<ScannedWiFiNetwork> Parse(string output)
+    public static IReadOnlyList<ScannedWiFiNetwork> Parse(string output, string? interfaceName = null)
     {
         if (string.IsNullOrWhiteSpace(output))
         {
             return [];
         }
 
+        var normalizedIface = string.IsNullOrWhiteSpace(interfaceName) ? null : interfaceName.Trim();
         var results = new List<ScannedWiFiNetwork>();
         using var reader = new StringReader(output);
 
@@ -43,7 +44,6 @@ public static class NmcliWiFiScanParser
                 : null;
 
             int? explicitFreq = fields.Count > 4 ? ParseFreqMhz(fields[4]) : null;
-            var security = fields.Count > 5 && !string.IsNullOrWhiteSpace(fields[5]) ? fields[5].Trim() : null;
 
             var (freqMhz, band) = WiFiChannelConverter.Resolve(channel, explicitFreq, null);
             int? rssi = signal.HasValue ? WiFiChannelConverter.SignalPercentToApproxRssiDbm(signal.Value) : null;
@@ -56,11 +56,83 @@ public static class NmcliWiFiScanParser
                 Band: band,
                 FrequencyMhz: freqMhz,
                 Channel: channel,
-                RadioType: null,
-                Authentication: security));
+                InterfaceName: normalizedIface));
         }
 
         return results;
+    }
+
+    /// <summary>
+    /// Parses <c>nmcli -t -f DEVICE,TYPE,STATE,CONNECTION dev status</c> output and filters strictly to <c>wifi</c> devices.
+    /// </summary>
+    public static IReadOnlyList<WlanInterfaceInfo> ParseInterfaces(string output)
+    {
+        if (string.IsNullOrWhiteSpace(output))
+        {
+            return [];
+        }
+
+        var results = new List<WlanInterfaceInfo>();
+        using var reader = new StringReader(output);
+
+        while (reader.ReadLine() is { } rawLine)
+        {
+            if (string.IsNullOrWhiteSpace(rawLine))
+            {
+                continue;
+            }
+
+            var fields = SplitUnescapedColons(rawLine);
+            if (fields.Count < 3)
+            {
+                continue;
+            }
+
+            var device = fields[0].Trim();
+            var type = fields[1].Trim();
+            var rawState = fields[2].Trim();
+
+            if (device.Length == 0 || !type.Equals("wifi", StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            var (state, isUsable) = NormalizeNmcliState(rawState);
+            results.Add(new WlanInterfaceInfo(
+                Name: device,
+                State: state,
+                IsUsableForScan: isUsable,
+                Description: "802.11 (NetworkManager)"));
+        }
+
+        return results;
+    }
+
+    private static (string State, bool IsUsable) NormalizeNmcliState(string rawState)
+    {
+        var lower = rawState.ToLowerInvariant();
+        if (lower.StartsWith("connected", StringComparison.Ordinal))
+        {
+            return ("Connected", true);
+        }
+
+        if (lower.StartsWith("disconnected", StringComparison.Ordinal))
+        {
+            return ("Disconnected", true);
+        }
+
+        if (lower.StartsWith("connecting", StringComparison.Ordinal))
+        {
+            return ("Connecting", true);
+        }
+
+        if (lower.StartsWith("unavailable", StringComparison.Ordinal) ||
+            lower.StartsWith("unmanaged", StringComparison.Ordinal))
+        {
+            return ("Unavailable", false);
+        }
+
+        return ("Unknown", false);
     }
 
     private static int? ParseFreqMhz(string raw)

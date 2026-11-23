@@ -1,4 +1,8 @@
 FROM mcr.microsoft.com/dotnet/sdk:10.0 AS development
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends iw network-manager libcap2-bin \
+    && rm -rf /var/lib/apt/lists/* \
+    && setcap cap_net_admin,cap_net_raw+ep "$(readlink -f "$(command -v iw)")" || true
 WORKDIR /src
 COPY Checker.API/Checker.API.csproj Checker.API/
 COPY Checker.Application/Checker.Application.csproj Checker.Application/
@@ -13,6 +17,10 @@ FROM development AS build
 RUN dotnet publish Checker.API/Checker.API.csproj -c Release -o /app --no-restore
 
 FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS runtime
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends iw network-manager libcap2-bin \
+    && rm -rf /var/lib/apt/lists/* \
+    && setcap cap_net_admin,cap_net_raw+ep "$(readlink -f "$(command -v iw)")" || true
 WORKDIR /app
 COPY --from=build /app .
 ENV ASPNETCORE_URLS=http://+:8080

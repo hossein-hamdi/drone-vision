@@ -24,16 +24,34 @@ public sealed class NetworkCheckEndpointTests
 
         using var doc = await response.Content.ReadFromJsonAsync<JsonDocument>();
         Assert.NotNull(doc);
-        Assert.True(doc!.RootElement.GetProperty("isDroneStation").GetBoolean());
-        Assert.Equal("Confirmed", doc.RootElement.GetProperty("verdict").GetString());
-        Assert.Equal("60:60:1F:AA:BB:CC", doc.RootElement.GetProperty("normalizedBssid").GetString());
-        Assert.Equal("DJI", doc.RootElement.GetProperty("brandMark").GetString());
+        var root = doc!.RootElement;
+        Assert.True(root.GetProperty("isDroneStation").GetBoolean());
+        Assert.Equal("Confirmed", root.GetProperty("verdict").GetString());
+        Assert.True(root.GetProperty("confidenceScore").GetInt32() >= 85);
+        Assert.Equal("60:60:1F:AA:BB:CC", root.GetProperty("bssid").GetString());
+        Assert.Equal("DJI", root.GetProperty("brandMark").GetString());
+        Assert.NotEmpty(root.GetProperty("candidateModels").EnumerateArray());
+        Assert.NotEmpty(root.GetProperty("frequencyBands").EnumerateArray());
+        Assert.Equal("MultiRole", root.GetProperty("stationRole").GetString());
+
+        string[] removedCheckFields =
+        [
+            "normalizedBssid", "observedSsid", "ouiPrefix", "matchedPrefix",
+            "isLocallyAdministered", "isMulticast", "matchedSsidPattern",
+            "hardwareVendor", "chipsetExclusivity", "matchSource",
+            "frequencyRangesMhz", "channelSummary", "radioProtocols",
+            "signalRangeTier", "knownSsidPatterns", "notes"
+        ];
+        foreach (var field in removedCheckFields)
+        {
+            Assert.False(root.TryGetProperty(field, out _), $"Field '{field}' should be omitted from streamlined /networks/check response.");
+        }
     }
 
     [Theory]
     [InlineData("/networks/check")]
     [InlineData("/networks/check?bssid=invalid-mac")]
-    [InlineData("/networks/check?bssid=00:00:00:00:00:00")]
+    [InlineData("/netwo rks/check?bssid=00:00:00:00:00:00")]
     [InlineData("/networks/check?bssid=FF:FF:FF:FF:FF:FF")]
     [InlineData("/networks/check?bssid=60:60:1F:12:34:56&ssid=")]
     [InlineData("/networks/check?bssid=60:60:1F:12:34:56&ssid=AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA")]

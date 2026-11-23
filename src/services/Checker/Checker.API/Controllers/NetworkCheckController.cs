@@ -22,8 +22,24 @@ public sealed class NetworkCheckController(IDroneNetworkCheckerService checkerSe
         "includePossible"
     };
 
+    private static readonly HashSet<string> AllowedInterfacesQueryKeys = new(StringComparer.OrdinalIgnoreCase);
+
     /// <summary>
-    /// Inspects a wireless station BSSID (and optional SSID) to determine whether it belongs to a drone station.
+    /// Lists available host wireless (WLAN) network interfaces and reports whether live scanning is supported in the current environment.
+    /// </summary>
+    /// <param name="ct">Request cancellation token.</param>
+    [HttpGet("interfaces")]
+    [ProducesResponseType<WlanInterfacesResponse>(StatusCodes.Status200OK)]
+    public async Task<ActionResult<WlanInterfacesResponse>> Interfaces(CancellationToken ct = default)
+    {
+        RejectUnexpectedQueryKeys(AllowedInterfacesQueryKeys);
+
+        var result = await checkerService.GetWlanInterfacesAsync(ct);
+        return Ok(result);
+    }
+
+    /// <summary>
+    /// Inspects a wireless station BSSID (and optional SSID) and returns streamlined drone identification details.
     /// </summary>
     /// <param name="bssid">Required station BSSID/MAC address in colon, hyphen, dot, or bare 12-hex format.</param>
     /// <param name="ssid">Optional observed Wi-Fi SSID (max 32 UTF-8 bytes) to improve model attribution and confirm shared chipsets.</param>
@@ -43,7 +59,7 @@ public sealed class NetworkCheckController(IDroneNetworkCheckerService checkerSe
     }
 
     /// <summary>
-    /// Scans nearby Wi-Fi networks using the host wireless adapter and returns only the filtered drone stations.
+    /// Scans nearby Wi-Fi networks across all usable host WLAN interfaces, deduplicates stations by BSSID, and returns only detected drone stations.
     /// </summary>
     /// <param name="includePossible">Optional flag to include uncorroborated shared Wi-Fi chipsets (default: false).</param>
     /// <param name="ct">Request cancellation token.</param>

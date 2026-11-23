@@ -1,0 +1,450 @@
+openapi: 3.0.3
+info:
+  title: DroneVision Network Checker API
+  version: v1
+  description: >
+    Standalone microservice that inspects wireless BSSIDs (MAC addresses) and optional SSIDs,
+    lists available host WLAN interfaces, and scans across all usable WLAN interfaces to return
+    deduplicated drone stations. Protected by Management-issued HS512 JWT bearer tokens or browser
+    session cookies.
+servers:
+  - url: /api/checker
+    description: Behind the Ocelot API Gateway (HTTPS :8443)
+  - url: /
+    description: Direct service execution (local development)
+
+paths:
+  /networks/check:
+    get:
+      summary: Check whether a BSSID (and optional SSID) belongs to a drone station
+      operationId: checkDroneNetwork
+      security:
+        - BrowserSession: []
+        - Bearer: []
+      parameters:
+        - name: bssid
+          in: query
+          required: true
+          description: >
+            Wireless station BSSID / MAC address in colon, hyphen, dot, or bare 12-hex format.
+            All-zero and broadcast addresses are rejected.
+          schema:
+            type: string
+            minLength: 12
+            maxLength: 32
+            example: "60:60:1F:12:34:56"
+        - name: ssid
+          in: query
+          required: false
+          description: Optional observed Wi-Fi SSID (max 32 UTF-8 bytes, no control characters).
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 32
+            example: "Bugs_123456"
+      responses:
+        "200":
+          description: Streamlined network inspection result (9 essential fields).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DroneNetworkCheckResponse"
+              examples:
+                confirmedDji:
+                  summary: Confirmed DJI station
+                  value:
+                    isDroneStation: true
+                    verdict: Confirmed
+                    confidenceScore: 90
+                    bssid: "60:60:1F:12:34:56"
+                    brandMark: "DJI"
+                    candidateModels: ["Mavic Series", "Phantom Series", "Inspire Series", "Mini Series", "Air Series"]
+                    frequencyBands: ["2.4 GHz", "5.8 GHz"]
+                    stationRole: MultiRole
+                sharedChipsetWithSsid:
+                  summary: Confirmed Syma via shared chipset + SSID
+                  value:
+                    isDroneStation: true
+                    verdict: Confirmed
+                    confidenceScore: 92
+                    bssid: "20:F4:1B:AA:BB:CC"
+                    ssid: "SYMA_FPV_8842"
+                    brandMark: "Syma"
+                    candidateModels: ["Syma X5SW / X5UW / X8W / X25W FPV Series"]
+                    frequencyBands: ["2.4 GHz"]
+                    stationRole: AircraftAp
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "429":
+          $ref: "#/components/responses/RateLimitError"
+        "500":
+          $ref: "#/components/responses/ServerError"
+
+  /networks/interfaces:
+    get:
+      summary: List available host WLAN interfaces and live scanning availability
+      operationId: getWlanInterfaces
+      description: >
+        Enumerates host 802.11 WLAN interfaces (excluding Ethernet, loopback, and virtual bridges).
+        When running inside Windows Docker or any container without accessible wireless adapters,
+        returns 200 OK with available=false, an explanatory reason, and an empty interfaces array.
+      security:
+        - BrowserSession: []
+        - Bearer: []
+      responses:
+        "200":
+          description: WLAN interface availability and list of discovered wireless interfaces.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WlanInterfacesResponse"
+              examples:
+                linuxWithMultipleAdapters:
+                  summary: Linux host/container with two WLAN interfaces
+                  value:
+                    available: true
+                    interfaces:
+                      - name: "wlan0"
+                        state: "Up"
+                        isUsableForScan: true
+                        macAddress: "00:11:22:33:44:55"
+                      - name: "wlan1"
+                        state: "Up"
+                        isUsableForScan: true
+                        macAddress: "66:77:88:99:AA:BB"
+                windowsDockerUnavailable:
+                  summary: Windows Docker without wireless passthrough
+                  value:
+                    available: false
+                    reason: "Live wireless scanning is unavailable because no accessible WLAN interfaces were detected in this environment."
+                    interfaces: []
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "429":
+          $ref: "#/components/responses/RateLimitError"
+        "500":
+          $ref: "#/components/responses/ServerError"
+
+  /networks/scan:
+    get:
+      summary: Scan all usable WLAN interfaces and return deduplicated drone stations
+      operationId: scanDroneNetworks
+      description: >
+        Scans nearby wireless networks across every usable WLAN interface, deduplicates observations
+        by canonical BSSID (retaining strongest signal and merging observing interfaceNames), and filters
+        out non-drone networks. Returns 503 Service Unavailable in environments without wireless access
+        (such as Windows Docker).
+      security:
+        - BrowserSession: []
+        - Bearer: []
+      parameters:
+        - name: includePossible
+          in: query
+          required: false
+          description: Include uncorroborated shared Wi-Fi chipsets (verdict=Possible). Default is false.
+          schema:
+            type: boolean
+            default: false
+      responses:
+        "200":
+          description: Deduplicated, filtered drone scan results across all scanned WLAN interfaces.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ScannedDroneNetworksResponse"
+              examples:
+                deduplicatedMultiInterface:
+                  summary: Drone seen on both wlan0 and wlan1 deduplicated into one entry
+                  value:
+                    scannedAtUtc: "2026-11-24T00:55:00Z"
+                    scannedInterfaces: ["wlan0", "wlan1"]
+                    totalNetworksScanned: 7
+                    droneCount: 1
+                    drones:
+                      - bssid: "60:60:1F:12:34:56"
+                        ssid: "Mavic-3-Pro"
+                        isDroneStation: true
+                        verdict: Confirmed
+                        confidenceScore: 98
+                        brandMark: "DJI"
+                        candidateModels: ["Mavic Series"]
+                        frequencyBands: ["2.4 GHz", "5.8 GHz"]
+                        stationRole: AircraftAp
+                        signalStrengthPercent: 92
+                        rssiDbm: -54
+                        band: "5.8 GHz"
+                        frequencyMhz: 5745
+                        channel: 149
+                        interfaceNames: ["wlan0", "wlan1"]
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "429":
+          $ref: "#/components/responses/RateLimitError"
+        "500":
+          $ref: "#/components/responses/ServerError"
+        "503":
+          description: Live Wi-Fi scanning unavailable (e.g., Windows Docker, no wireless adapter, or scan timeout).
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ProblemDetails"
+
+  /health:
+    get:
+      summary: Service liveness and readiness probe
+      operationId: getHealth
+      security: []
+      responses:
+        "200":
+          description: Service and signature catalog initialized and ready.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [status]
+                properties:
+                  status:
+                    type: string
+                    example: Healthy
+
+components:
+  securitySchemes:
+    BrowserSession:
+      type: apiKey
+      in: cookie
+      name: __Secure-DroneVision.Refresh
+    Bearer:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  responses:
+    ValidationError:
+      description: Validation error (invalid parameter value or unexpected query parameter).
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/ValidationProblemDetails"
+    UnauthorizedError:
+      description: Missing, invalid, expired, or untrusted JWT bearer token or browser session.
+      headers:
+        WWW-Authenticate:
+          schema:
+            type: string
+            example: Bearer
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/ProblemDetails"
+    RateLimitError:
+      description: Rate limit exceeded.
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/ProblemDetails"
+    ServerError:
+      description: Unexpected server error (sanitized, no stack trace).
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/ProblemDetails"
+
+  schemas:
+    DroneNetworkCheckResponse:
+      type: object
+      required:
+        - isDroneStation
+        - verdict
+        - confidenceScore
+        - bssid
+        - candidateModels
+        - frequencyBands
+        - stationRole
+      properties:
+        isDroneStation:
+          type: boolean
+        verdict:
+          type: string
+          enum: [NotRecognized, Possible, Probable, Confirmed]
+        confidenceScore:
+          type: integer
+          minimum: 0
+          maximum: 100
+        bssid:
+          type: string
+        ssid:
+          type: string
+          nullable: true
+        brandMark:
+          type: string
+          nullable: true
+        candidateModels:
+          type: array
+          items:
+            type: string
+        frequencyBands:
+          type: array
+          items:
+            type: string
+        stationRole:
+          type: string
+          enum: [Unknown, AircraftAp, GroundController, FpvVtx, TelemetryModule, MultiRole]
+
+    ScannedDroneNetworksResponse:
+      type: object
+      required:
+        - scannedAtUtc
+        - scannedInterfaces
+        - totalNetworksScanned
+        - droneCount
+        - drones
+      properties:
+        scannedAtUtc:
+          type: string
+          format: date-time
+        scannedInterfaces:
+          type: array
+          items:
+            type: string
+        totalNetworksScanned:
+          type: integer
+          minimum: 0
+        droneCount:
+          type: integer
+          minimum: 0
+        drones:
+          type: array
+          items:
+            $ref: "#/components/schemas/ScannedDroneNetworkDto"
+
+    ScannedDroneNetworkDto:
+      type: object
+      required:
+        - bssid
+        - isDroneStation
+        - verdict
+        - confidenceScore
+        - candidateModels
+        - frequencyBands
+        - stationRole
+        - interfaceNames
+      properties:
+        bssid:
+          type: string
+        ssid:
+          type: string
+          nullable: true
+        isDroneStation:
+          type: boolean
+        verdict:
+          type: string
+          enum: [NotRecognized, Possible, Probable, Confirmed]
+        confidenceScore:
+          type: integer
+          minimum: 0
+          maximum: 100
+        brandMark:
+          type: string
+          nullable: true
+        candidateModels:
+          type: array
+          items:
+            type: string
+        frequencyBands:
+          type: array
+          items:
+            type: string
+        stationRole:
+          type: string
+          enum: [Unknown, AircraftAp, GroundController, FpvVtx, TelemetryModule, MultiRole]
+        signalStrengthPercent:
+          type: integer
+          minimum: 0
+          maximum: 100
+          nullable: true
+        rssiDbm:
+          type: integer
+          nullable: true
+        band:
+          type: string
+          nullable: true
+        frequencyMhz:
+          type: integer
+          nullable: true
+        channel:
+          type: integer
+          nullable: true
+        interfaceNames:
+          type: array
+          items:
+            type: string
+
+    WlanInterfacesResponse:
+      type: object
+      required:
+        - available
+        - interfaces
+      properties:
+        available:
+          type: boolean
+        reason:
+          type: string
+          nullable: true
+        interfaces:
+          type: array
+          items:
+            $ref: "#/components/schemas/WlanInterfaceDto"
+
+    WlanInterfaceDto:
+      type: object
+      required:
+        - name
+        - state
+        - isUsableForScan
+      properties:
+        name:
+          type: string
+        state:
+          type: string
+        isUsableForScan:
+          type: boolean
+        description:
+          type: string
+          nullable: true
+        macAddress:
+          type: string
+          nullable: true
+
+    ProblemDetails:
+      type: object
+      properties:
+        type:
+          type: string
+        title:
+          type: string
+        status:
+          type: integer
+        detail:
+          type: string
+        instance:
+          type: string
+        traceId:
+          type: string
+
+    ValidationProblemDetails:
+      allOf:
+        - $ref: "#/components/schemas/ProblemDetails"
+        - type: object
+          properties:
+            errors:
+              type: object
+              additionalProperties:
+                type: array
+                items:
+                  type: string

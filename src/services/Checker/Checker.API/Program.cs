@@ -172,7 +172,7 @@ builder.Services.AddSwaggerGen(o =>
     {
         Title = "DroneVision Network Checker API",
         Version = "v1",
-        Description = "Identifies drone wireless stations by BSSID/SSID and scans nearby Wi-Fi networks to return only drone stations."
+        Description = "Identifies drone wireless stations by BSSID/SSID, enumerates host WLAN interfaces, and scans across all usable WLAN adapters to return deduplicated drone stations."
     });
 
     var xmlPath = Path.Combine(AppContext.BaseDirectory, "Checker.API.xml");

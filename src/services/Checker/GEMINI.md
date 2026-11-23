@@ -27,8 +27,9 @@ The **Checker** service (`src/services/Checker`) is a standalone `.NET 10.0` Cle
 ```text
 src/services/Checker/
 ├── Checker.slnx                                # .NET solution file
-├── Dockerfile                                  # Multi-stage non-root ($APP_UID) container build (includes nmcli)
-├── compose.yaml                                # Production service definition for checker
+├── Dockerfile                                  # Multi-stage non-root ($APP_UID) container build (includes iw, nmcli, libcap2-bin)
+├── compose.yaml                                # Production service definition for checker (safe bridge DNS)
+├── compose.linux-wifi.yaml                     # Optional Linux host wireless D-Bus / NET_ADMIN Compose override
 ├── package.json                                # pnpm dev/build/start/test/format scripts
 ├── GEMINI.md                                   # Service architecture & invariants guide
 ├── .dockerignore
@@ -52,18 +53,20 @@ src/services/Checker/
 ├── Checker.Application/                        # Use-case abstractions, DTOs, evaluators, scoring & ApiException
 │   ├── Checker.Application.csproj
 │   ├── Abstractions/
-│   │   ├── IDroneNetworkCheckerService.cs      # CheckAsync & ScanDroneNetworksAsync
+│   │   ├── IDroneNetworkCheckerService.cs      # CheckAsync, GetWlanInterfacesAsync & ScanDroneNetworksAsync
 │   │   ├── IDroneSignatureCatalog.cs
 │   │   ├── INetworkEvidenceEvaluator.cs
-│   │   └── IWiFiScanner.cs                     # Host Wi-Fi scan abstraction & ScannedWiFiNetwork record
+│   │   └── IWiFiScanner.cs                     # Host WLAN discovery & multi-interface scan abstraction
 │   ├── Common/
 │   │   └── ApiException.cs                     # Typed HTTP domain exceptions (400, 401, 403, 404, 503)
 │   ├── DTOs/
 │   │   ├── DroneNetworkCheckQuery.cs
-│   │   ├── DroneNetworkCheckResponse.cs
-│   │   └── ScannedDroneNetworksDto.cs          # ScannedDroneNetworksResponse & ScannedDroneNetworkDto
+│   │   ├── DroneNetworkCheckResponse.cs        # Streamlined 9-field /networks/check DTO
+│   │   ├── DroneNetworkEvaluation.cs           # Internal full evidence evaluation before DTO projection
+│   │   ├── ScannedDroneNetworksDto.cs          # ScannedDroneNetworksResponse, streamlined 15-field ScannedDroneNetworkDto & WiFiScanBatch
+│   │   └── WlanInterfacesDto.cs                # WlanInterfaceInfo, WlanInterfaceDiscoveryResult & WlanInterfacesResponse
 │   └── Services/
-│       ├── DroneNetworkCheckerService.cs       # Orchestrates single BSSID/SSID checks & filtered Wi-Fi scans
+│       ├── DroneNetworkCheckerService.cs       # Orchestrates checks, WLAN discovery & cross-interface BSSID deduplication
 │       ├── MacPrefixEvidenceEvaluator.cs       # Longest-prefix (36/28/24-bit) MAC lookup
 │       ├── SsidEvidenceEvaluator.cs            # NonBacktracking SSID pattern evaluation
 │       └── VerdictScoringPolicy.cs             # Conservative scoring & non-confirmation for shared chipsets
@@ -77,10 +80,11 @@ src/services/Checker/
 │   │   ├── Data/drone-signatures.json          # Curated drone OUI/MA-M/MA-S & SSID signature dataset
 │   │   └── EmbeddedDroneSignatureCatalog.cs    # FrozenDictionary prefix indexes & NonBacktracking regexes
 │   └── Scanning/
-│       ├── NetshWiFiScanParser.cs              # Parses Windows `netsh wlan show networks mode=bssid`
-│       ├── NmcliWiFiScanParser.cs              # Parses Linux `nmcli` ter-format scan output
-│       ├── PlatformWiFiScanner.cs              # Executes netsh.exe (Windows) or nmcli (Linux)
-│       └── WiFiChannelConverter.cs             # Converts channel <-> MHz <-> FrequencyBand
+│       ├── IwWiFiScanParser.cs                 # Parses Linux `iw dev` & `iw dev <iface> scan` output
+│       ├── NetshWiFiScanParser.cs              # Parses Windows `netsh wlan show networks` & `show interfaces`
+│       ├── NmcliWiFiScanParser.cs              # Parses Linux `nmcli` device status & Wi-Fi scan output
+│       ├── PlatformWiFiScanner.cs              # Multi-WLAN discovery/scanning (`iw`/`nmcli` on Linux, `netsh` on Windows)
+│       └── WiFiChannelConverter.cs             # Converts channel <-> MHz <-> FrequencyBand & RSSI <-> %
 ├── Checker.API/                                # Composition root, controllers, auth handlers, Swagger
 │   ├── Checker.API.csproj
 │   ├── Program.cs                              # Middleware pipeline, Dual Auth, RateLimiting, Security Headers, Swagger
@@ -93,7 +97,7 @@ src/services/Checker/
 │   │   └── ManagementSessionValidator.cs       # Calls Management /auth/me without redirects
 │   ├── Controllers/
 │   │   ├── ApiController.cs                    # [ApiController], [Authorize], JSON & ProblemDetails attributes
-│   │   └── NetworkCheckController.cs           # GET /networks/check & GET /networks/scan
+│   │   └── NetworkCheckController.cs           # GET /networks/check, GET /networks/interfaces & GET /networks/scan
 │   ├── ExceptionHandling/
 │   │   ├── ApiProblems.cs                      # RFC 9457 ProblemDetails enrichment with traceId
 │   │   └── ExceptionHandlers.cs                # Ordered ValidationExceptionHandler -> ApiExceptionHandler -> GlobalExceptionHandler
@@ -108,34 +112,27 @@ src/services/Checker/
 │   │   ├── NetworkCheckAuthSecurityTests.cs
 │   │   ├── NetworkCheckEndpointTests.cs
 │   │   ├── NetworkScanEndpointTests.cs
-│   │   └── SwaggerEnvironmentTests.cs
+│   │   ├── SwaggerEnvironmentTests.cs
+│   │   └── WlanInterfacesEndpointTests.cs
 │   └── Unit/
 │       ├── DroneNetworkCheckerServiceTests.cs
 │       ├── DroneSignatureCatalogTests.cs
 │       ├── MacAddressTests.cs
+│       ├── PlatformWiFiScannerSafetyTests.cs
+│       ├── VerdictScoringPolicyTests.cs
 │       └── WiFiScanParsersTests.cs
-└── specs/001-drone-network-checker/            # SpecKit feature specification, plan, contracts & tasks
-    ├── spec.md
-    ├── plan.md
-    ├── research.md
-    ├── data-model.md
-    ├── quickstart.md
-    ├── tasks.md
-    ├── checklists/requirements.md
-    └── contracts/
-        ├── gateway-route.md
-        └── openapi.yaml
+└── specs/                                      # SpecKit specifications (001 & 002-multi-wlan-scan)
 ```
 
 ---
 
 ## 3. Core Files & Responsibilities
 - `Checker.API/Program.cs`: Configures `UnmappedMemberHandling.Disallow` on JSON serialization, registers RFC 9457 `ProblemDetails` + 3 ordered `IExceptionHandler`s, configures `"BrowserOrBearer"` dual auth, registers IP fixed-window rate limiting (`429`), adds security response headers, configures `Gateway:PathBase`, and exposes `/health` anonymously plus `/swagger` in Development only.
-- `Checker.API/Controllers/NetworkCheckController.cs`: Exposes `GET /networks/check` and `GET /networks/scan` with strict query parameter allowlisting (`RejectUnexpectedQueryKeys`).
+- `Checker.API/Controllers/NetworkCheckController.cs`: Exposes `GET /networks/check`, `GET /networks/interfaces`, and `GET /networks/scan` with strict query parameter allowlisting (`RejectUnexpectedQueryKeys`).
 - `Checker.API/Authentication/BrowserSessionHandler.cs` & `ManagementSessionValidator.cs`: Validates the 86-character `__Secure-DroneVision.Refresh` cookie against `Management:BaseUrl` (`/auth/me`) over `HttpClient` (`AllowAutoRedirect = false`), returning sanitized `401` responses on invalid/expired cookies.
-- `Checker.Application/Services/DroneNetworkCheckerService.cs`: Orchestrates `CheckAsync` (single BSSID/SSID evaluation) and `ScanDroneNetworksAsync` (scans via `IWiFiScanner`, filters to matched drone stations, optionally including `DetectionVerdict.Possible` when `includePossible=true`).
+- `Checker.Application/Services/DroneNetworkCheckerService.cs`: Orchestrates `CheckAsync` (streamlined 9-field lookup), `GetWlanInterfacesAsync` (WLAN discovery & availability status), and `ScanDroneNetworksAsync` (scans all usable interfaces via `IWiFiScanner`, deduplicates by canonical BSSID, and returns streamlined 15-field drone records).
 - `Checker.Infrastructure/Catalog/EmbeddedDroneSignatureCatalog.cs`: Loads `drone-signatures.json` once at startup into immutable `FrozenDictionary` lookup tables for 36-bit MA-S, 28-bit MA-M, and 24-bit MA-L prefixes plus compiled `RegexOptions.NonBacktracking` SSID rules.
-- `Checker.Infrastructure/Scanning/PlatformWiFiScanner.cs`: Executes `netsh.exe wlan show networks mode=bssid` on Windows (`NetshWiFiScanParser`) and `nmcli` on Linux (`NmcliWiFiScanParser`), throwing `503 Service Unavailable` when no wireless interface or scan tool is available.
+- `Checker.Infrastructure/Scanning/PlatformWiFiScanner.cs`: Discovers 802.11 WLAN adapters and scans across all usable interfaces (`netsh.exe` on Windows; `/sys/class/net/*/wireless` + `iw` or D-Bus `nmcli` on Linux), returning `available: false` on interface discovery and `503 Service Unavailable` on scan when wireless hardware is inaccessible (such as Windows Docker).
 
 ---
 
@@ -147,7 +144,8 @@ src/services/Checker/
 - **Regex Safety:** All SSID patterns compile with `RegexOptions.NonBacktracking` and a match timeout to prevent ReDoS.
 
 ### Platform Wi-Fi Scanning Constraints
-- **Linux Containers on Windows (Docker Desktop / WSL2):** Docker Desktop on Windows runs Linux containers inside a WSL2 VM without PCIe Wi-Fi passthrough (`eth0`/`lo` only), so `GET /networks/scan` returns `503 Service Unavailable` inside Windows Docker unless running on a native Linux host with a wireless interface (or a Linux VM with USB Wi-Fi passthrough) or running `Checker.API` natively on Windows (`pnpm dev`).
+- **Linux Containers on Windows (Docker Desktop / WSL2):** Docker Desktop on Windows runs Linux containers inside a WSL2 VM without PCIe Wi-Fi passthrough (`eth0`/`lo` only). `GET /networks/interfaces` cleanly returns `200 OK` with `available: false` and `interfaces: []`, `GET /networks/scan` safely returns `503 Service Unavailable`, and `GET /networks/check` continues operating normally.
+- **Linux Hosts / Linux Docker:** Both `iw` (`nl80211`) and `network-manager` (`nmcli`) are installed in `Dockerfile` while running as non-root `USER $APP_UID`. Mount `/run/dbus/system_bus_socket` via `compose.linux-wifi.yaml` (preserving Docker bridge DNS) or use host networking with `NET_ADMIN` for direct `iw` scanning across all WLAN adapters.
 
 ---
 
